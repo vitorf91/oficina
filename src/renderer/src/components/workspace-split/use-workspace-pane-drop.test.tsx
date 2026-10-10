@@ -12,10 +12,13 @@ import {
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
-const mocks = vi.hoisted(() => ({
-  state: { workspaceSplitGroups: [] as WorkspaceSplitGroup[], placeWorkspaceAtEdge: vi.fn() },
-  activate: vi.fn()
-}))
+const mocks = vi.hoisted(() => {
+  const workspaceSplitGroups: WorkspaceSplitGroup[] = []
+  return {
+    state: { workspaceSplitGroups, placeWorkspaceAtEdge: vi.fn() },
+    activate: vi.fn()
+  }
+})
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
 vi.mock('@/store', () => ({ useAppStore: { getState: () => mocks.state } }))

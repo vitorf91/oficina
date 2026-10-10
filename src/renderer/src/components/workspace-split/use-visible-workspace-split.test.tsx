@@ -8,7 +8,10 @@ import {
 } from '@/lib/workspace-split-layout'
 import { useVisibleWorkspaceSplit } from './use-visible-workspace-split'
 
-const mocks = vi.hoisted(() => ({ state: { workspaceSplitGroups: [] as WorkspaceSplitGroup[] } }))
+const mocks = vi.hoisted(() => {
+  const workspaceSplitGroups: WorkspaceSplitGroup[] = []
+  return { state: { workspaceSplitGroups } }
+})
 
 vi.mock('@/store', () => ({
   useAppStore: (selector: (state: typeof mocks.state) => unknown) => selector(mocks.state)

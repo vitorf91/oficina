@@ -9,15 +9,15 @@ import { WorkspaceSplitMenuItems } from './WorkspaceSplitMenuItems'
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
-const mocks = vi.hoisted(() => ({
-  state: {
-    folderWorkspaces: [],
-    workspaceSplitGroups: [] as WorkspaceSplitGroup[],
-    placeWorkspaceAtEdge: vi.fn()
-  },
-  worktrees: [] as Worktree[],
-  unsplit: vi.fn()
-}))
+const mocks = vi.hoisted(() => {
+  const workspaceSplitGroups: WorkspaceSplitGroup[] = []
+  const worktrees: Worktree[] = []
+  return {
+    state: { folderWorkspaces: [], workspaceSplitGroups, placeWorkspaceAtEdge: vi.fn() },
+    worktrees,
+    unsplit: vi.fn()
+  }
+})
 
 vi.mock('@/store', () => ({
   useAppStore: (selector: (state: typeof mocks.state) => unknown) => selector(mocks.state)
