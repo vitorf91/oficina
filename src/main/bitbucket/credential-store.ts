@@ -11,6 +11,7 @@ import {
 import type { BitbucketAuthMode } from '../../shared/bitbucket-credentials'
 import { readCredentialFileProtection } from '../credential-file-protection'
 import type { SecretAtRestProtection } from '../../shared/secret-at-rest-protection'
+import { OFICINA_IDENTITY } from '../../shared/oficina-identity'
 
 // Why: the secret stays encrypted via safeStorage while this metadata stays
 // plaintext, so status reads render the connected account without decrypting —
@@ -51,7 +52,7 @@ let cachedSecret: BitbucketStoredSecret | null = null
 let credentialError: string | null = null
 
 function getOrcaDir(): string {
-  return join(homedir(), '.orca')
+  return join(homedir(), OFICINA_IDENTITY.homeDirName)
 }
 
 function getMetadataPath(): string {

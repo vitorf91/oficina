@@ -13,8 +13,9 @@ import type {
   PairingProvisionRelayParams
 } from '../../../shared/mobile-relay-credential-contract'
 import type { RelayDeviceBinding, RelayRevokeOutboxItem } from '../relay/relay-revoke-outbox'
+import { OFICINA_IDENTITY } from '../../../shared/oficina-identity'
 
-export const DEFAULT_WS_PORT = 6768
+export const DEFAULT_WS_PORT = OFICINA_IDENTITY.mobileWsPort
 
 // Why: STA-2370 — the WS listener defaults to loopback so a desktop with no paired device is not
 // reachable from the LAN; it widens to all interfaces only on explicit pairing (or `orca serve`).

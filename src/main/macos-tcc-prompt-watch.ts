@@ -1,6 +1,7 @@
 import { spawn, type ChildProcessByStdio } from 'node:child_process'
 import { createInterface, type Interface } from 'node:readline'
 import type { Readable } from 'node:stream'
+import { OFICINA_IDENTITY } from '../shared/oficina-identity'
 
 /** Why: stdin is 'ignore', so this is narrower than ChildProcessWithoutNullStreams. */
 export type LogStreamChild = ChildProcessByStdio<null, Readable, Readable>
@@ -19,6 +20,8 @@ export type LogStreamChild = ChildProcessByStdio<null, Readable, Readable>
 
 /** Why: terminals run from the detached helper, which TCC can hold responsible independently. */
 const ORCA_RESPONSIBLE_IDENTIFIERS = new Set([
+  OFICINA_IDENTITY.appId,
+  `${OFICINA_IDENTITY.appId}.helper`,
   'com.stablyai.orca',
   'com.stablyai.orca.helper',
   'com.stablyai.orca.dev',

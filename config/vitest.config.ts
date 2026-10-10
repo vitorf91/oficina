@@ -29,6 +29,7 @@ const testOptions = {
   // Node's storage globals and V8 retention checks require the existing child flags.
   execArgv: ['--no-experimental-webstorage', '--expose-gc'],
   setupFiles: [
+    resolve('config/scripts/vitest-upstream-identity-setup.ts'),
     resolve('config/scripts/vitest-real-agent-home-write-guard.ts'),
     resolve('config/scripts/vitest-bun-node-builtins.ts'),
     resolve('config/scripts/happy-dom-offscreen-canvas.ts'),

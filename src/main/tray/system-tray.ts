@@ -6,6 +6,7 @@ import { createAppIconImage } from '../app-icon'
 import { translateMain } from '../i18n/main-i18n'
 import { composeTrayAttentionIcon, tintTrayTemplateForAttention } from './tray-attention-icon'
 import { stampTrayDevBadge } from './tray-dev-badge'
+import { OFICINA_IDENTITY } from '../../shared/oficina-identity'
 
 export type SystemTrayOptions = {
   /** App icon id from settings; the tray reuses the app icon image. */
@@ -47,9 +48,11 @@ let nativeThemeUpdatedListener: (() => void) | null = null
 // tooltip carries the worktree/branch label so hovering tells them apart.
 function baseTooltip(): string {
   if (!devIndicator) {
-    return 'Orca'
+    return OFICINA_IDENTITY.productName
   }
-  return devIndicator.label ? `Orca DEV (${devIndicator.label})` : 'Orca DEV'
+  return devIndicator.label
+    ? `${OFICINA_IDENTITY.productName} DEV (${devIndicator.label})`
+    : `${OFICINA_IDENTITY.productName} DEV`
 }
 
 // Why: on Windows the notification area expects a 16px icon; the app icon PNG

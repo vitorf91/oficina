@@ -1,11 +1,12 @@
 import { existsSync, mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { OFICINA_IDENTITY } from '../../shared/oficina-identity'
 
 export const LEGACY_WORKSPACE_ID = 'legacy'
 
 function getOrcaDir(): string {
-  return join(homedir(), '.orca')
+  return join(homedir(), OFICINA_IDENTITY.homeDirName)
 }
 
 function getLegacyTokenPath(): string {

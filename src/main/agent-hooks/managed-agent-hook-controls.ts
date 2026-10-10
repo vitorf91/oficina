@@ -3,6 +3,7 @@ import {
   getManagedAgentHookTarget,
   isManagedAgentHookTarget
 } from '../../shared/managed-agent-hook-targets'
+import { OFICINA_IDENTITY } from '../../shared/oficina-identity'
 import { normalizeDisabledTuiAgents } from '../../shared/tui-agent-selection'
 import type { GlobalSettings } from '../../shared/global-settings-types'
 import {
@@ -139,6 +140,10 @@ export async function installManagedAgentHooks(
   settings: ManagedHookSettings = null,
   options: InstallOptions = {}
 ): Promise<AgentHookInstallStatus[]> {
+  // Why: the fork must not write the user-wide hook files the official Orca owns.
+  if (!OFICINA_IDENTITY.agentStatusHooksEnabled) {
+    return []
+  }
   await refreshExistingManagedScripts(options)
   const installers = selectedInstallers(options)
   const disabled = new Set(normalizeDisabledTuiAgents(settings?.disabledTuiAgents))
@@ -206,6 +211,9 @@ export async function installManagedAgentHooks(
 export async function removeManagedAgentHooks(
   options: RemoveOptions = {}
 ): Promise<AgentHookInstallStatus[]> {
+  if (!OFICINA_IDENTITY.agentStatusHooksEnabled) {
+    return []
+  }
   const allowed = options.agents ? new Set(options.agents) : null
   const results: AgentHookInstallStatus[] = []
   for (const [agent, remove] of MANAGED_AGENT_HOOK_REMOVERS) {
@@ -224,6 +232,9 @@ export async function removeManagedAgentHooks(
 export async function removeManagedAgentHooksAsync(
   options: RemoveOptions = {}
 ): Promise<AgentHookInstallStatus[]> {
+  if (!OFICINA_IDENTITY.agentStatusHooksEnabled) {
+    return []
+  }
   const allowed = options.agents ? new Set(options.agents) : null
   return await Promise.all(
     MANAGED_AGENT_HOOK_ASYNC_REMOVERS.filter(

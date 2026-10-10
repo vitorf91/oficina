@@ -10,6 +10,7 @@ import {
 } from '../../shared/claude-agent-teams-tmux-compat'
 import { getOrcaCliCommandNameForPlatform } from '../../shared/orca-cli-command-name'
 import { resolvePathEnvKey } from '../pty/windows-path-segment-merge'
+import { OFICINA_IDENTITY } from '../../shared/oficina-identity'
 
 export type ClaudeAgentTeamsLaunchPlan = {
   command: string
@@ -84,7 +85,7 @@ export function resolveClaudeAgentTeamsShimBin(
 }
 
 function defaultShimRoot(): string {
-  return join(homedir(), '.orca', 'claude-agent-teams-bin')
+  return join(homedir(), OFICINA_IDENTITY.homeDirName, 'claude-agent-teams-bin')
 }
 
 function bundledLauncherPath(): string | null {
