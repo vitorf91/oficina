@@ -1,11 +1,14 @@
 // Adapted from brooksgolden/orca, feature/sessions-grid-custom, MIT.
 import type { AppState } from '@/store/types'
+import { isLiveWorkspace } from './live-workspace'
 import { findWorkspaceSplitPartner } from './workspace-split-layout'
 import { parseWorkspaceKey } from '../../../shared/workspace-scope'
 
 /** Called only after a user close has succeeded, including host-owned terminal closes. */
 export function collapseEmptyWorkspaceSplit(state: AppState, worktreeId: string): boolean {
-  const partner = findWorkspaceSplitPartner(state.workspaceSplitGroups, worktreeId)
+  const partner = findWorkspaceSplitPartner(state.workspaceSplitGroups, worktreeId, (id) =>
+    isLiveWorkspace(state, id)
+  )
   if (
     !partner ||
     (state.unifiedTabsByWorktree[worktreeId] ?? []).length > 0 ||

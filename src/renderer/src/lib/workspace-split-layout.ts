@@ -42,20 +42,31 @@ export function findWorkspaceSplitGroup(
   return groups.find((group) => collectWorkspaceIds(group.layout).includes(workspaceId)) ?? null
 }
 
+/** The first other member of the group that is live, or null when the workspace stands alone. */
 export function findWorkspaceSplitPartner(
   groups: readonly WorkspaceSplitGroup[] | undefined,
-  workspaceId: string
+  workspaceId: string,
+  isLive: (workspaceId: string) => boolean = () => true
 ): string | null {
   const group = findWorkspaceSplitGroup(groups, workspaceId)
-  return group ? (collectWorkspaceIds(group.layout).find((id) => id !== workspaceId) ?? null) : null
+  return group
+    ? (collectWorkspaceIds(group.layout).find((id) => id !== workspaceId && isLive(id)) ?? null)
+    : null
 }
 
-function removeLeaf(node: WorkspaceLayoutNode, id: string): WorkspaceLayoutNode | null {
+/**
+ * The layout restricted to the members `keep` accepts; a dropped member's space goes to its
+ * sibling. Null when no member is kept, and the same object when none was dropped.
+ */
+export function restrictWorkspaceLayout(
+  node: WorkspaceLayoutNode,
+  keep: (workspaceId: string) => boolean
+): WorkspaceLayoutNode | null {
   if (node.type === 'leaf') {
-    return node.workspaceId === id ? null : node
+    return keep(node.workspaceId) ? node : null
   }
-  const first = removeLeaf(node.first, id)
-  const second = removeLeaf(node.second, id)
+  const first = restrictWorkspaceLayout(node.first, keep)
+  const second = restrictWorkspaceLayout(node.second, keep)
   if (!first) {
     return second
   }
@@ -63,6 +74,59 @@ function removeLeaf(node: WorkspaceLayoutNode, id: string): WorkspaceLayoutNode 
     return first
   }
   return first === node.first && second === node.second ? node : { ...node, first, second }
+}
+
+/**
+ * The group as it shows for `workspaceId`: only its live members, so a member that is still
+ * loading or was deleted outside the app leaves the others in place instead of hiding the whole
+ * group. Null when fewer than two remain, which shows the workspace on its own.
+ */
+export function liveWorkspaceSplitGroup(
+  groups: readonly WorkspaceSplitGroup[] | undefined,
+  workspaceId: string | null,
+  isLive: (workspaceId: string) => boolean
+): WorkspaceSplitGroup | null {
+  const group = findWorkspaceSplitGroup(groups, workspaceId)
+  if (!group || !workspaceId || !isLive(workspaceId)) {
+    return null
+  }
+  const layout = restrictWorkspaceLayout(group.layout, isLive)
+  if (!layout || collectWorkspaceIds(layout).length < 2) {
+    return null
+  }
+  return layout === group.layout ? group : { ...group, layout }
+}
+
+/**
+ * Translates a path in the live layout back to the stored layout, stepping through the splits
+ * that were collapsed because one side has no live member.
+ */
+export function storedWorkspaceLayoutPath(
+  stored: WorkspaceLayoutNode,
+  isLive: (workspaceId: string) => boolean,
+  livePath: WorkspaceLayoutPath
+): WorkspaceLayoutPath {
+  const hasLiveMember = (node: WorkspaceLayoutNode): boolean =>
+    collectWorkspaceIds(node).some(isLive)
+  const storedPath: ('first' | 'second')[] = []
+  let node = stored
+  let rest = livePath
+  while (node.type === 'split') {
+    const firstLive = hasLiveMember(node.first)
+    if (firstLive && hasLiveMember(node.second)) {
+      if (rest.length === 0) {
+        break
+      }
+      storedPath.push(rest[0])
+      node = node[rest[0]]
+      rest = rest.slice(1)
+    } else {
+      const side = firstLive ? 'first' : 'second'
+      storedPath.push(side)
+      node = node[side]
+    }
+  }
+  return storedPath
 }
 
 function edgeSplit(
@@ -102,7 +166,10 @@ function withoutWorkspace(
   workspaceId: string
 ): WorkspaceSplitGroup[] {
   return groups
-    .map((group) => ({ ...group, layout: removeLeaf(group.layout, workspaceId) }))
+    .map((group) => ({
+      ...group,
+      layout: restrictWorkspaceLayout(group.layout, (id) => id !== workspaceId)
+    }))
     .filter((group): group is WorkspaceSplitGroup => group.layout !== null)
     .filter((group) => collectWorkspaceIds(group.layout).length >= 2)
 }
@@ -156,22 +223,6 @@ export function removeWorkspaceFromSplit(
   workspaceId: string
 ): WorkspaceSplitGroup[] {
   return withoutWorkspace(groups, workspaceId)
-}
-
-/** Drops members that are no longer live workspaces; groups left with one member dissolve. */
-export function pruneWorkspaceSplitGroups(
-  groups: readonly WorkspaceSplitGroup[],
-  isLive: (workspaceId: string) => boolean
-): WorkspaceSplitGroup[] {
-  let pruned = [...groups]
-  for (const group of groups) {
-    for (const id of collectWorkspaceIds(group.layout)) {
-      if (!isLive(id)) {
-        pruned = withoutWorkspace(pruned, id)
-      }
-    }
-  }
-  return pruned
 }
 
 export function setWorkspaceSplitRatio(

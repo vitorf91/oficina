@@ -3,6 +3,7 @@ import { useCallback, useRef, useState } from 'react'
 import { useAppStore } from '@/store'
 import {
   collectWorkspaceIds,
+  storedWorkspaceLayoutPath,
   type WorkspaceLayoutPath,
   type WorkspaceSplitEdge
 } from '@/lib/workspace-split-layout'
@@ -18,6 +19,7 @@ type SplitSurfaceController = Pick<
   | 'mountedWorktreeIdsRef'
   | 'renderedActiveWorktreeId'
   | 'visibleWorkspaceSplitGroup'
+  | 'workspaceSurfaceIdSet'
   | 'workspaceSurfaces'
 >
 
@@ -39,17 +41,28 @@ export function useWorkspaceSplitSurfaces(controller: SplitSurfaceController) {
     mountedWorktreeIdsRef,
     renderedActiveWorktreeId,
     visibleWorkspaceSplitGroup,
+    workspaceSurfaceIdSet,
     workspaceSurfaces
   } = controller
   const rootRef = useRef<HTMLDivElement>(null)
   const [paneRects, setPaneRects] = useState<Map<string, WorkspacePaneRect>>(() => new Map())
   const onRatioChange = useCallback(
     (path: WorkspaceLayoutPath, ratio: number) => {
-      if (visibleWorkspaceSplitGroup) {
-        useAppStore.getState().setWorkspaceSplitRatio(visibleWorkspaceSplitGroup.id, path, ratio)
+      const state = useAppStore.getState()
+      const stored = state.workspaceSplitGroups.find(
+        (candidate) => candidate.id === visibleWorkspaceSplitGroup?.id
+      )
+      if (stored) {
+        // Why: the shown tree skips members that are not live, so its paths differ from the stored ones.
+        const storedPath = storedWorkspaceLayoutPath(
+          stored.layout,
+          (id) => workspaceSurfaceIdSet.has(id),
+          path
+        )
+        state.setWorkspaceSplitRatio(stored.id, storedPath, ratio)
       }
     },
-    [visibleWorkspaceSplitGroup]
+    [visibleWorkspaceSplitGroup?.id, workspaceSurfaceIdSet]
   )
   // Why: the group shows only once every member's surface is mounted, so a partner still
   // waiting to mount never leaves a hole next to the active workspace.

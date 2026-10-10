@@ -4,11 +4,13 @@ import {
   collectWorkspaceIds,
   findWorkspaceSplitGroup,
   findWorkspaceSplitPartner,
+  liveWorkspaceSplitGroup,
   MAX_WORKSPACE_PANES,
   placeWorkspaceAtEdge,
-  pruneWorkspaceSplitGroups,
   removeWorkspaceFromSplit,
+  restrictWorkspaceLayout,
   setWorkspaceSplitRatio,
+  storedWorkspaceLayoutPath,
   type WorkspaceSplitEdge,
   type WorkspaceSplitGroup
 } from './workspace-split-layout'
@@ -133,14 +135,118 @@ describe('removeWorkspaceFromSplit', () => {
   })
 })
 
-describe('pruneWorkspaceSplitGroups', () => {
-  it('drops workspaces that no longer exist and dissolves groups left with one member', () => {
-    let groups = placeWorkspaceAtEdge([], 'b', 'a', 'right', 'view-1')
-    groups = placeWorkspaceAtEdge(groups, 'c', 'b', 'bottom', 'unused')
-    groups = placeWorkspaceAtEdge(groups, 'y', 'x', 'right', 'view-2')
-    const pruned = pruneWorkspaceSplitGroups(groups, (id) => id !== 'c' && id !== 'y')
-    expect(pruned).toHaveLength(1)
-    expect(collectWorkspaceIds(pruned[0].layout)).toEqual(['a', 'b'])
+// a | (b over (c | d)): three split nodes, so removing a member collapses a different level each time.
+function nestedGroups(): WorkspaceSplitGroup[] {
+  let groups = placeWorkspaceAtEdge([], 'b', 'a', 'right', 'view-1')
+  groups = placeWorkspaceAtEdge(groups, 'c', 'b', 'bottom', 'unused')
+  return placeWorkspaceAtEdge(groups, 'd', 'c', 'right', 'unused')
+}
+
+const liveExcept =
+  (...gone: string[]) =>
+  (id: string) =>
+    !gone.includes(id)
+
+describe('restrictWorkspaceLayout', () => {
+  it("gives a dropped member its sibling's space and keeps the other subtrees as they are", () => {
+    const { layout } = nestedGroups()[0]
+    const restricted = restrictWorkspaceLayout(layout, liveExcept('b'))
+    expect(collectWorkspaceIds(restricted!)).toEqual(['a', 'c', 'd'])
+    expect(restricted).toMatchObject({
+      type: 'split',
+      first: { type: 'leaf', workspaceId: 'a' },
+      second: { type: 'split', direction: 'horizontal' }
+    })
+  })
+
+  it('returns the very same layout when nothing is dropped, and null when nothing is kept', () => {
+    const { layout } = nestedGroups()[0]
+    expect(restrictWorkspaceLayout(layout, () => true)).toBe(layout)
+    expect(restrictWorkspaceLayout(layout, () => false)).toBeNull()
+  })
+})
+
+describe('liveWorkspaceSplitGroup', () => {
+  it('shows only the live members of a group and leaves the stored group untouched', () => {
+    const groups = nestedGroups()
+    const shown = liveWorkspaceSplitGroup(groups, 'a', liveExcept('d'))
+    expect(shown?.id).toBe('view-1')
+    expect(collectWorkspaceIds(shown!.layout)).toEqual(['a', 'b', 'c'])
+    expect(collectWorkspaceIds(groups[0].layout)).toEqual(['a', 'b', 'c', 'd'])
+  })
+
+  it('brings a member back in its own place once it is live again', () => {
+    const groups = nestedGroups()
+    const whileLoading = liveWorkspaceSplitGroup(groups, 'a', liveExcept('c'))
+    expect(collectWorkspaceIds(whileLoading!.layout)).toEqual(['a', 'b', 'd'])
+    const loaded = liveWorkspaceSplitGroup(groups, 'a', () => true)
+    expect(collectWorkspaceIds(loaded!.layout)).toEqual(['a', 'b', 'c', 'd'])
+  })
+
+  it('is the stored group itself while every member is live', () => {
+    const groups = nestedGroups()
+    expect(liveWorkspaceSplitGroup(groups, 'b', () => true)).toBe(groups[0])
+  })
+
+  it('shows a lone survivor on its own instead of as a split', () => {
+    const groups = nestedGroups()
+    expect(liveWorkspaceSplitGroup(groups, 'a', liveExcept('b', 'c', 'd'))).toBeNull()
+    expect(liveWorkspaceSplitGroup(groups, 'a', (id) => id === 'a')).toBeNull()
+  })
+
+  it('answers nothing for an unknown, inactive or not-live workspace', () => {
+    const groups = nestedGroups()
+    expect(liveWorkspaceSplitGroup(groups, null, () => true)).toBeNull()
+    expect(liveWorkspaceSplitGroup(groups, 'outsider', () => true)).toBeNull()
+    expect(liveWorkspaceSplitGroup(groups, 'a', liveExcept('a'))).toBeNull()
+    expect(liveWorkspaceSplitGroup(undefined, 'a', () => true)).toBeNull()
+  })
+})
+
+describe('findWorkspaceSplitPartner', () => {
+  it('skips partners that are not live', () => {
+    const groups = nestedGroups()
+    expect(findWorkspaceSplitPartner(groups, 'a')).toBe('b')
+    expect(findWorkspaceSplitPartner(groups, 'a', liveExcept('b'))).toBe('c')
+    expect(findWorkspaceSplitPartner(groups, 'a', liveExcept('b', 'c', 'd'))).toBeNull()
+  })
+})
+
+describe('storedWorkspaceLayoutPath', () => {
+  const stored = nestedGroups()[0].layout
+
+  it('is the identity while every member is live', () => {
+    expect(storedWorkspaceLayoutPath(stored, () => true, [])).toEqual([])
+    expect(storedWorkspaceLayoutPath(stored, () => true, ['second', 'second'])).toEqual([
+      'second',
+      'second'
+    ])
+  })
+
+  it('steps through a split that was collapsed by a missing member', () => {
+    // Without b, the lower-right split (c | d) is the right-hand side of the shown root.
+    const isLive = liveExcept('b')
+    expect(storedWorkspaceLayoutPath(stored, isLive, [])).toEqual([])
+    expect(storedWorkspaceLayoutPath(stored, isLive, ['second'])).toEqual(['second', 'second'])
+  })
+
+  it('maps the shown root to the stored node when whole sides are missing', () => {
+    expect(storedWorkspaceLayoutPath(stored, liveExcept('a'), [])).toEqual(['second'])
+    expect(storedWorkspaceLayoutPath(stored, liveExcept('a', 'b'), [])).toEqual([
+      'second',
+      'second'
+    ])
+  })
+
+  it('makes a resize land on the node the user dragged', () => {
+    const groups = nestedGroups()
+    const isLive = liveExcept('b')
+    const storedPath = storedWorkspaceLayoutPath(groups[0].layout, isLive, ['second'])
+    const resized = setWorkspaceSplitRatio(groups, 'view-1', storedPath, 0.3)
+    expect(resized[0].layout).toMatchObject({
+      ratio: 0.5,
+      second: { type: 'split', direction: 'vertical', ratio: 0.5, second: { ratio: 0.3 } }
+    })
   })
 })
 

@@ -1,7 +1,7 @@
 // Adapted from brooksgolden/orca, feature/sessions-grid-custom, MIT.
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAppStore } from '../../store'
-import { makeOpenFile } from '../../store/slices/store-test-helpers'
+import { makeOpenFile, makeWorktree } from '../../store/slices/store-test-helpers'
 import { captureWorkspaceEmptiedReaction } from './workspace-emptied-reaction'
 
 const LEFT = 'repo1::/tmp/left'
@@ -16,6 +16,12 @@ beforeEach(() => {
     return true
   })
   useAppStore.setState({
+    worktreesByRepo: {
+      repo1: [
+        makeWorktree({ id: LEFT, repoId: 'repo1', path: '/tmp/left' }),
+        makeWorktree({ id: RIGHT, repoId: 'repo1', path: '/tmp/right' })
+      ]
+    },
     workspaceSplitGroups: [],
     unifiedTabsByWorktree: {},
     tabsByWorktree: {},

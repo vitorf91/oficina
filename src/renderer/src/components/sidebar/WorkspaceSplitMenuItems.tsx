@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { translate } from '@/i18n/i18n'
 import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
-import { findWorkspaceSplitGroup } from '@/lib/workspace-split-layout'
+import { liveWorkspaceSplitGroup } from '@/lib/workspace-split-layout'
 import { resolveWorktreeDisplayName } from '@/lib/worktree-default-display-name'
 import { useAppStore } from '@/store'
 import { useAllWorktrees, useRepoMap } from '@/store/selectors'
@@ -32,8 +32,9 @@ export function WorkspaceSplitMenuItems({
   const repoMap = useRepoMap()
   const groups = useAppStore((state) => state.workspaceSplitGroups)
   const placeWorkspaceAtEdge = useAppStore((state) => state.placeWorkspaceAtEdge)
-  const isSplit = findWorkspaceSplitGroup(groups, worktreeId) !== null
-  const candidates = useMemo(() => {
+  // A split counts only through its live members: a lone survivor of a group whose other
+  // members are still loading or gone shows on its own, so it is offered a new split instead.
+  const { isSplit, candidates } = useMemo(() => {
     const options: SplitCandidate[] = [
       ...allWorktrees.map((worktree) => ({
         id: worktree.id,
@@ -46,18 +47,23 @@ export function WorkspaceSplitMenuItems({
         project: ''
       }))
     ]
+    const liveIds = new Set(options.map((option) => option.id))
+    const isLive = (id: string): boolean => liveIds.has(id)
     const seen = new Set<string>()
-    return options.filter((option) => {
-      if (
-        option.id === worktreeId ||
-        seen.has(option.id) ||
-        findWorkspaceSplitGroup(groups, option.id)
-      ) {
-        return false
-      }
-      seen.add(option.id)
-      return true
-    })
+    return {
+      isSplit: liveWorkspaceSplitGroup(groups, worktreeId, isLive) !== null,
+      candidates: options.filter((option) => {
+        if (
+          option.id === worktreeId ||
+          seen.has(option.id) ||
+          liveWorkspaceSplitGroup(groups, option.id, isLive)
+        ) {
+          return false
+        }
+        seen.add(option.id)
+        return true
+      })
+    }
   }, [allWorktrees, folders, groups, repoMap, worktreeId])
 
   if (isSplit) {
