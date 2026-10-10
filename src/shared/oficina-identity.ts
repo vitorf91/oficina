@@ -16,6 +16,9 @@ export type OficinaIdentity = {
   cliCommandName: string
   autoUpdateEnabled: boolean
   agentStatusHooksEnabled: boolean
+  agentStatusReceiverEnabled: boolean
+  computerUseBundled: boolean
+  worktreeTrashSweepEnabled: boolean
 }
 
 export const OFICINA_IDENTITY: OficinaIdentity = {
@@ -36,5 +39,13 @@ export const OFICINA_IDENTITY: OficinaIdentity = {
   autoUpdateEnabled: false,
   // Agent status hooks write ~/.orca/agent-hooks and ~/.claude, ~/.codex, ~/.cursor... configs that
   // the official Orca owns, so the fork keeps them off until it has namespaced hooks of its own.
-  agentStatusHooksEnabled: false
+  agentStatusHooksEnabled: false,
+  // Receiving is not installing: the local hook listener runs and its address is exported into this
+  // app's own terminals, so the scripts the official Orca already installed report here. No file is written.
+  agentStatusReceiverEnabled: true,
+  // The fork bundles no Computer Use helper; one found by path or env would be Orca's, with Orca's permissions.
+  computerUseBundled: false,
+  // Both apps open the same repos. The official Orca parks a removed checkout in <workspace>/.orca-worktree-trash and renames
+  // it back if the removal fails, so a sweep from this app could delete a checkout that Orca is about to restore.
+  worktreeTrashSweepEnabled: false
 }

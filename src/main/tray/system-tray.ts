@@ -7,6 +7,7 @@ import { translateMain } from '../i18n/main-i18n'
 import { composeTrayAttentionIcon, tintTrayTemplateForAttention } from './tray-attention-icon'
 import { stampTrayDevBadge } from './tray-dev-badge'
 import { OFICINA_IDENTITY } from '../../shared/oficina-identity'
+import { withProductName } from '../../shared/oficina-product-name'
 
 export type SystemTrayOptions = {
   /** App icon id from settings; the tray reuses the app icon image. */
@@ -91,7 +92,7 @@ function applyTrayImage(): void {
         tray.setToolTip(
           devIndicator
             ? `${baseTooltip()} - ${translateMain('tray.activityWaitingSuffix', 'activity waiting')}`
-            : translateMain('tray.activityWaiting', 'Orca - activity waiting')
+            : withProductName(translateMain('tray.activityWaiting', 'Orca - activity waiting'))
         )
         return
       } catch (error) {
@@ -264,7 +265,7 @@ export function createSystemTray(opts: SystemTrayOptions): Tray | null {
         ] as Electron.MenuItemConstructorOptions[])
       : []),
     {
-      label: translateMain('tray.openOrca', 'Open Orca'),
+      label: withProductName(translateMain('tray.openOrca', 'Open Orca')),
       click: safeMenuAction(() => opts.onOpen())
     },
     { type: 'separator' },

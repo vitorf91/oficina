@@ -1,7 +1,12 @@
 import { existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { OFICINA_IDENTITY } from '../../shared/oficina-identity'
 
 export function resolveMacOSComputerUseAppPath(): string | null {
+  // Why: any helper this could find belongs to the official Orca; resolving none keeps its TCC grants and processes out of reach.
+  if (!OFICINA_IDENTITY.computerUseBundled) {
+    return null
+  }
   const override = process.env.ORCA_COMPUTER_MACOS_HELPER_APP_PATH
   if (override && existsSync(override)) {
     return override

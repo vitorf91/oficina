@@ -2,7 +2,7 @@ import { vi } from 'vitest'
 
 // Why: the suite inherited from stablyai/orca pins upstream names (.orca, 6768, hooks on, updater on).
 // Running it against upstream values keeps those tests unedited so merges stay cheap; the fork's real
-// values are covered by src/shared/oficina-identity.test.ts and the packaged-app proof in docs/OFICINA.md.
+// values are covered by src/main/startup/oficina-identity.test.ts, oficina-identity-wiring.test.ts and the packaged-app proof in docs/OFICINA.md.
 vi.mock('../../src/shared/oficina-identity', () => ({
   OFICINA_IDENTITY: {
     productName: 'Orca',
@@ -15,6 +15,9 @@ vi.mock('../../src/shared/oficina-identity', () => ({
     devMobileWsPort: 6769,
     cliCommandName: 'orca',
     autoUpdateEnabled: true,
-    agentStatusHooksEnabled: true
+    agentStatusHooksEnabled: true,
+    agentStatusReceiverEnabled: true,
+    computerUseBundled: true,
+    worktreeTrashSweepEnabled: true
   }
 }))

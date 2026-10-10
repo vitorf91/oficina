@@ -31,6 +31,15 @@ describe('OFICINA_IDENTITY', () => {
 
     expect(identity.autoUpdateEnabled).toBe(false)
     expect(identity.agentStatusHooksEnabled).toBe(false)
+    expect(identity.computerUseBundled).toBe(false)
+    expect(identity.worktreeTrashSweepEnabled).toBe(false)
+  })
+
+  it('receives agent status without installing a hook', async () => {
+    const { OFICINA_IDENTITY: identity } = await import('../../shared/oficina-identity')
+
+    expect(identity.agentStatusReceiverEnabled).toBe(true)
+    expect(identity.agentStatusHooksEnabled).toBe(false)
   })
 
   it('matches the CJS mirror electron-builder reads', async () => {

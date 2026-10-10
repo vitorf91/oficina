@@ -16,6 +16,7 @@ import { mergePersistedWindowsPath } from '../../../pty/windows-environment-path
 import { resolveCodexShellLaunchPreflightCommand } from '../../../pty/codex-shell-launch-preflight'
 import { scheduleCodexHookReconcile } from '../../../codex/codex-hook-reconcile'
 import { buildConfiguredProxyEnv } from '../../../../shared/network-proxy'
+import { OFICINA_IDENTITY } from '../../../../shared/oficina-identity'
 import { isTuiAgentEnabled } from '../../../../shared/tui-agent-selection'
 import type { BuildPtyHostEnvOptions } from './types'
 import { stripInheritedOrcaCodexHomeOverride } from './codex-home'
@@ -144,6 +145,12 @@ export function buildPtyHostEnv(
         delete baseEnv.ORCA_OPENCODE_SOURCE_CONFIG_DIR
       }
     }
+  } else if (
+    OFICINA_IDENTITY.agentStatusReceiverEnabled &&
+    !OFICINA_IDENTITY.agentStatusHooksEnabled
+  ) {
+    // Why: report-only fork: it installs nothing, but hook scripts the official Orca installed report to whichever receiver the PTY env names; the server returns {} once the user switches status off.
+    Object.assign(baseEnv, agentHookServer.buildPtyEnv())
   }
 
   // Why: PI_CODING_AGENT_DIR is the user's config/session root; install only Orca-owned extension files, don't override it.

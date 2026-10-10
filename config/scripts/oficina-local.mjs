@@ -18,6 +18,7 @@ import {
   closeSync,
   readFileSync,
   readdirSync,
+  rmSync,
   writeFileSync
 } from 'node:fs'
 import { homedir } from 'node:os'
@@ -206,6 +207,13 @@ function install(appPath = defaultAppPath) {
   }
   if (existsSync(installPath) && !process.argv.includes('--replace')) {
     throw new Error(`${installPath} exists; pass --replace to overwrite this fork's own bundle.`)
+  }
+  if (existsSync(installPath)) {
+    if (spawnSync('pgrep', ['-f', `${installPath}/Contents/`]).status === 0) {
+      throw new Error(`${installPath} is running; quit Oficina first.`)
+    }
+    // Why: ditto merges into an existing bundle, so a file the new build dropped would break the seal.
+    rmSync(installPath, { recursive: true, force: true })
   }
   run('ditto', [appPath, installPath])
   run('codesign', ['--verify', '--deep', '--strict', installPath])

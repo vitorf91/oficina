@@ -15,6 +15,13 @@ export function isAgentStatusHooksEnabled(
   return OFICINA_IDENTITY.agentStatusHooksEnabled && settings?.agentStatusHooksEnabled !== false
 }
 
+// Why separate: the fork can receive status from hook scripts someone else installed while still writing no hook file itself.
+export function isAgentStatusReceiverEnabled(
+  settings: Partial<Pick<GlobalSettings, 'agentStatusHooksEnabled'>> | null | undefined
+): boolean {
+  return OFICINA_IDENTITY.agentStatusReceiverEnabled && settings?.agentStatusHooksEnabled !== false
+}
+
 // Why: turning an agent off removes its hooks, so any install that reads only the global switch writes them back.
 export function isAgentStatusHooksEnabledForAgent(
   settings: AgentStatusHooksSettings,

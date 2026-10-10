@@ -1,4 +1,5 @@
-import { homedir } from 'node:os'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -54,6 +55,48 @@ describe('Oficina identity wiring', () => {
     expect(isAgentStatusHooksEnabledForAgent({ agentStatusHooksEnabled: true }, 'claude')).toBe(
       false
     )
+  })
+
+  it('still receives agent status, because the scripts the official Orca installed only need a listener', async () => {
+    const { isAgentStatusReceiverEnabled } = await import('../../shared/agent-status-hooks-setting')
+
+    expect(isAgentStatusReceiverEnabled({ agentStatusHooksEnabled: true })).toBe(true)
+    expect(isAgentStatusReceiverEnabled({})).toBe(true)
+    // Why: the Settings switch stays the user's way to turn status off.
+    expect(isAgentStatusReceiverEnabled({ agentStatusHooksEnabled: false })).toBe(false)
+  })
+
+  it('resolves no Computer Use helper, so its TCC reset and process kill cannot reach Orca', async () => {
+    const { resolveMacOSComputerUseAppPath, resolveMacOSComputerUseExecutablePath } =
+      await import('../computer/macos-native-provider-paths')
+    const { resetComputerUsePermissions } =
+      await import('../computer/macos-computer-use-permissions')
+    // Why: an existing folder stands for an official Orca helper bundle reached through the override variable.
+    vi.stubEnv('ORCA_COMPUTER_MACOS_HELPER_APP_PATH', tmpdir())
+    try {
+      expect(resolveMacOSComputerUseAppPath()).toBeNull()
+      expect(resolveMacOSComputerUseExecutablePath()).toBeNull()
+      if (process.platform === 'darwin') {
+        await expect(resetComputerUsePermissions()).rejects.toThrow('was not found')
+      }
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+
+  it('leaves worktree trash alone, because the official Orca may still restore what is in it', async () => {
+    const { sweepStaleWorktreeTrash } = await import('../worktree-trash')
+    const workspace = mkdtempSync(join(tmpdir(), 'oficina-trash-'))
+    const entry = join(workspace, '.orca-worktree-trash', 'wt-1700000000000-abcdef12')
+    try {
+      mkdirSync(entry, { recursive: true })
+      writeFileSync(join(entry, 'unsaved.txt'), 'work in progress')
+
+      await expect(sweepStaleWorktreeTrash([workspace])).resolves.toEqual({ removed: 0 })
+      expect(existsSync(join(entry, 'unsaved.txt'))).toBe(true)
+    } finally {
+      rmSync(workspace, { recursive: true, force: true })
+    }
   })
 
   it('makes install and remove no-ops so no user-wide agent file is written', async () => {
