@@ -37,6 +37,13 @@ describe('Oficina electron-builder config', () => {
     expect(config.mac.notarize).toBe(false)
   })
 
+  it('keeps local test output and sources out of app.asar', () => {
+    expect(config.files).toEqual(expect.arrayContaining(upstream.files))
+    for (const excluded of ['test-results', 'playwright-report', 'tests']) {
+      expect(config.files).toContain(`!${excluded}{,/**/*}`)
+    }
+  })
+
   it('leaves the upstream config module untouched', () => {
     expect(upstream.appId).toBe('com.stablyai.orca')
     expect(upstream.publish.repo).toBe('orca')

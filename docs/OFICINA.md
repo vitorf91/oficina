@@ -149,4 +149,50 @@ Not covered: agents whose status comes from a plugin or extension that the offic
 
 ## Keeping upstream merges cheap
 
-Upstream files changed for the identity are one-line swaps to `OFICINA_IDENTITY` (see `git diff v1.4.223 --stat`). `config/electron-builder.config.cjs` is untouched. After a sync, rerun `pnpm tc`, the unit tests and `oficina-local.mjs build`, then check the coexistence checklist: `orca://` still resolves to Orca, `/usr/local/bin/orca` still points into Orca.app, and `~/.orca` and the user agent configs are unchanged after a launch.
+Upstream files changed for the identity are one-line swaps to `OFICINA_IDENTITY` (see `git diff v1.4.223 --stat`). `config/electron-builder.config.cjs` is untouched. After a sync (next section), check the coexistence checklist: `orca://` still resolves to Orca, `/usr/local/bin/orca` still points into Orca.app, and `~/.orca` and the user agent configs are unchanged after a launch.
+
+## Syncing with Orca
+
+`pnpm oficina:sync` (`config/scripts/oficina-sync.mjs`) brings the newest stable Orca release into `oficina`. Run it through Node 24, from a clean checkout; a throwaway worktree keeps the main clone untouched.
+
+```sh
+git worktree add --detach ~/Documents/oficina-wt/sync-run oficina && cd ~/Documents/oficina-wt/sync-run
+COREPACK_ENABLE_DOWNLOAD_PROMPT=0 fnm exec --using 24 -- pnpm oficina:sync                 # merge, install, gates; leaves a local sync/<tag> branch
+COREPACK_ENABLE_DOWNLOAD_PROMPT=0 fnm exec --using 24 -- pnpm oficina:sync --push --merge  # also open the PR into oficina, then merge it with a merge commit and delete the branch
+COREPACK_ENABLE_DOWNLOAD_PROMPT=0 fnm exec --using 24 -- pnpm oficina:sync --install       # also install over /Applications/Oficina.app (refuses while Oficina runs)
+```
+
+Flags combine; `--merge` needs `--push`. `--commit-trailer=<line>` adds a line to the merge commit message and `--notes-file=<path>` appends a file to the PR body (conflict notes). After `--merge`, fast-forward the main clone: `git fetch origin && git merge --ff-only origin/oficina`.
+
+What it does, in order:
+
+1. Refuses a dirty tree, a Node other than 24, and a local `oficina` that differs from `origin/oficina`.
+2. Lists the published upstream releases and takes the newest stable one (`vX.Y.Z`, not a draft or prerelease) that is newer than the newest stable tag already merged into `oficina`, then fetches that one tag. If there is none it says so and exits 0.
+3. Merges that tag into a new `sync/<tag>` branch with a merge commit (`--no-ff`).
+4. Installs dependencies with the frozen lockfile (root and `mobile/`), then runs the gates below in order and stops at the first failure. Nothing is pushed or installed unless every gate passed.
+5. Prints a summary with the tag, each gate and its duration; the PR body carries the same table.
+
+| Gate              | What it covers                                                                                                                                                                                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm tc`         | Node, CLI and web TypeScript projects compile against the merged upstream.                                                                                                                                                                                                |
+| Unit tests        | Every tracked test whose file name contains `oficina`, `workspace-split` or `workspace-pane`: the identity module and its CJS mirror, the builder wrapper, the sync selection logic, the split layout, storage, drop and pane code. Listed in the output before they run. |
+| E2E specs         | `workspace-split-*`, `workspace-pane-header` and `oficina-agent-status-receiver` specs through the repo's Playwright harness, whose global setup builds with `electron-vite build --mode e2e`. They use disposable user data and HOME, never the real Oficina profile.    |
+| Changed-code lint | `check-changed-code-quality.mjs` against the release tag: every line Oficina changed on top of upstream, under the new release's lint rules.                                                                                                                              |
+| Packaged build    | `oficina-local.mjs build`: JS build, native helpers, electron-builder, local signing. It refuses a dirty tree, stamps the build id from `HEAD`, and fails if `app.asar` holds test output or the stamp is not `HEAD`.                                                     |
+
+The gates cannot tell whether the app feels right. After an install, launch Oficina once and run the coexistence checklist above.
+
+### When the merge conflicts
+
+The script aborts the merge (no half-merged state, no leftover branch), lists the conflicting files and prints how to reproduce. Then:
+
+1. `git switch -c sync/<tag> oficina && git merge --no-ff <tag>`, resolve keeping both upstream's change and Oficina's behaviour (`src/shared/oficina-identity.ts`, the workspace-split files and the `config/*oficina*` files are Oficina's), and `git commit`.
+2. Write the file, the cause and the resolution of each conflict into a notes file, and run `pnpm oficina:sync --push --merge --notes-file=<path>` again. On a `sync/<tag>` branch that already contains the tag, it skips the merge and runs the gates.
+
+Prefer resolutions that shrink Oficina's footprint in upstream files, so the next merge is cheaper.
+
+### Cadence and rules
+
+- Weekly, and whenever the Orca phone app updates: the phone refuses a desktop whose protocol is older than it expects, so a lagging Oficina stops pairing.
+- `oficina` is never rebased, squashed over an upstream merge, or force-pushed. Upstream history must stay in it, because "last merged" is read from the tags reachable from `oficina`. Only the sync PR itself is merged with a merge commit; feature PRs into `oficina` are squash-merged as usual.
+- The PR always targets the fork (`origin`); the script refuses to run when `origin` is `stablyai/orca`.

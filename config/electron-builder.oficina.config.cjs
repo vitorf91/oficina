@@ -16,6 +16,9 @@ module.exports = {
   protocols: [{ name: identity.productName, schemes: [identity.urlScheme] }],
   // Why: Electron derives its default userData folder from package.json before any app code runs.
   extraMetadata: { ...base.extraMetadata, productName: identity.productName },
+  // Why: local e2e runs leave gitignored test-results/ and playwright-report/ in the checkout, and the
+  // upstream file list would pack them into app.asar. tests/ is already excluded upstream.
+  files: [...base.files, '!test-results{,/**/*}', '!playwright-report{,/**/*}'],
   // Why null: no publish block means no app-update.yml, so nothing can point at stablyai releases.
   publish: null,
   mac: {
