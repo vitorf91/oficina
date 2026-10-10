@@ -82,4 +82,23 @@ describe('Oficina identity wiring', () => {
 
     expect(DEFAULT_WS_PORT).toBe(6778)
   })
+
+  it('never polls stablyai/orca release assets for agent state rules', async () => {
+    const { AgentStateRulesLiveUpdater } =
+      await import('../runtime/agent-state-rules/agent-state-rules-live-update')
+    const fetch = vi.fn()
+    const updater = new AgentStateRulesLiveUpdater({
+      userDataPath: '/tmp/oficina-rules-test',
+      appVersion: '1.4.223',
+      isPackaged: true,
+      fetch,
+      readSettings: () => ({ agentStateRulesPath: undefined, agentStateRulesLiveUpdates: true }),
+      onActivated: () => undefined
+    })
+
+    await updater.start()
+    updater.stop()
+
+    expect(fetch).not.toHaveBeenCalled()
+  })
 })

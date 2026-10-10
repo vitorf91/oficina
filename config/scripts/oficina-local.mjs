@@ -4,7 +4,7 @@
 //   node config/scripts/oficina-local.mjs build            JS build + native helpers + packaged arm64 .app + sign
 //   node config/scripts/oficina-local.mjs sign [app]       sign every Mach-O inside-out with the local identity
 //   node config/scripts/oficina-local.mjs install [app]    copy the .app to /Applications/Oficina.app
-//   node config/scripts/oficina-local.mjs import-orca-data copy repo list + preferences from the official Orca
+//   node config/scripts/oficina-local.mjs import-orca-data [--target=dir]  copy repo list + preferences from the official Orca
 //
 // Nothing here writes to the official Orca's bundle or data folder; import-orca-data only reads them.
 import { execFileSync, spawnSync } from 'node:child_process'
@@ -33,7 +33,11 @@ const entitlementsPath = join(repoRoot, 'resources', 'build', 'entitlements.mac.
 const CODESIGN_TIMEOUT_MS = 120_000
 
 const OFFICIAL_ORCA_DATA_DIR = join(homedir(), 'Library', 'Application Support', 'orca')
-const OFICINA_DATA_DIR = join(homedir(), 'Library', 'Application Support', identity.userDataDirName)
+// Why --target: lets a dry run seed a throwaway userData folder before the real one is touched.
+const targetArgument = process.argv.find((arg) => arg.startsWith('--target='))
+const OFICINA_DATA_DIR = targetArgument
+  ? resolve(targetArgument.slice('--target='.length))
+  : join(homedir(), 'Library', 'Application Support', identity.userDataDirName)
 
 function run(command, args, options = {}) {
   console.log(`$ ${[command, ...args].join(' ')}`)
@@ -252,6 +256,8 @@ const KEPT_TOP_LEVEL_KEYS = [
   'folderWorkspaces',
   'sparsePresetsByRepo'
 ]
+// Booleans that only say a secret exists elsewhere; the importer resets them to false.
+const BOOLEAN_FLAG_KEY_PATHS = new Set(['$.settings.voice.openAiApiKeyConfigured'])
 const SECRET_KEY_NAME =
   /(api[-_]?key|token|secret|passw(?:or)?d|cookie|credential|authorization|bearer)/i
 const SECRET_VALUE_PATTERNS = [
@@ -305,13 +311,23 @@ function importOrcaData() {
   }
   // Why forced off: the fork keeps agent hooks off (docs/OFICINA.md), so the saved switch must say so too.
   filtered.settings.agentStatusHooksEnabled = false
+  // Why: the flag describes a key stored in the official Orca's ~/.orca, which Oficina does not read.
+  if (filtered.settings.voice && typeof filtered.settings.voice === 'object') {
+    filtered.settings.voice = { ...filtered.settings.voice, openAiApiKeyConfigured: false }
+  }
   filtered.ui = Object.fromEntries(
     KEPT_UI_KEYS.filter((key) => source.ui?.[key] !== undefined).map((key) => [key, source.ui[key]])
   )
 
-  const secretKeyPaths = findSecretKeyPaths(filtered)
+  const secretKeyPaths = findSecretKeyPaths(filtered).filter(
+    (path) => !BOOLEAN_FLAG_KEY_PATHS.has(path)
+  )
   const serialized = JSON.stringify(filtered)
+  const pointsIntoOfficialOrca = /Application Support\/orca|\/\.orca\b/i.test(serialized)
   const secretValueHits = SECRET_VALUE_PATTERNS.filter((pattern) => pattern.test(serialized)).length
+  if (pointsIntoOfficialOrca) {
+    throw new Error('Refusing to write: a kept value points into the official Orca folders.')
+  }
   if (secretKeyPaths.length > 0 || secretValueHits > 0) {
     throw new Error(
       `Refusing to write: ${secretKeyPaths.length} secret-looking key names (${secretKeyPaths.join(', ')}), ${secretValueHits} secret-looking values. Extend DROPPED_SETTINGS.`
@@ -361,7 +377,7 @@ switch (command) {
     break
   default:
     console.error(
-      'usage: oficina-local.mjs build | sign [app] | install [app] [--replace] | import-orca-data'
+      'usage: oficina-local.mjs build | sign [app] | install [app] [--replace] | import-orca-data [--target=dir]'
     )
     process.exitCode = 2
 }

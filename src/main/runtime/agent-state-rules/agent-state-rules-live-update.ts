@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { getAppEnvironment } from '../../../shared/app-environment'
 import { readFetchResponseTextWithinLimit } from '../../../shared/fetch-response-body'
 import type { GlobalSettings } from '../../../shared/global-settings-types'
+import { OFICINA_IDENTITY } from '../../../shared/oficina-identity'
 import { getVersionChannel, MAIN_RELEASE_REPO } from '../../../shared/release-channel'
 import { getMainHttpClient } from '../../network/http-client'
 import { writePluginFileAtomically } from '../../plugins/plugin-atomic-file-write'
@@ -121,7 +122,11 @@ export class AgentStateRulesLiveUpdater {
   async start(): Promise<void> {
     this.stop()
     const settings = this.deps.readSettings()
-    const live = this.deps.isPackaged && settings.agentStateRulesLiveUpdates !== false
+    // Why the identity flag: the fork must not poll stablyai/orca release assets for rules.
+    const live =
+      this.deps.isPackaged &&
+      OFICINA_IDENTITY.autoUpdateEnabled &&
+      settings.agentStateRulesLiveUpdates !== false
     const run = { channel: live ? agentStateRulesChannelForAppVersion(this.deps.appVersion) : null }
     this.run = run
     const overridePath = settings.agentStateRulesPath
