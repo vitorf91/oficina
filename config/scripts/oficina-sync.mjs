@@ -105,6 +105,24 @@ function currentBranch() {
   return git('branch', '--show-current')
 }
 
+// Why compare before fetching: a fetch of a tag already here still runs a connectivity walk that takes
+// minutes in this partial clone, and fetching every upstream tag stalls the same way.
+function fetchReleaseTag(tag) {
+  const ref = `refs/tags/${tag}`
+  const [upstreamId] = capture('git', ['ls-remote', 'upstream', ref]).split(/\s+/)
+  if (!upstreamId) {
+    throw new Error(`Release ${tag} is published, but upstream has no ${ref}.`)
+  }
+  const localId = gitSucceeds('rev-parse', '--verify', '--quiet', ref)
+    ? git('rev-parse', ref)
+    : null
+  if (localId === upstreamId && gitSucceeds('cat-file', '-e', `${ref}^{commit}`)) {
+    console.log(`[oficina-sync] ${tag} is already here`)
+    return
+  }
+  run('git', ['fetch', '--no-recurse-submodules', 'upstream', `${ref}:${ref}`])
+}
+
 // Why a continue mode: after a conflict the merge is finished by hand on sync/<tag>; re-running then resumes at the gates.
 function resolveSyncTag() {
   const lastMerged = newestStableTag(lines(git('tag', '--merged', BASE)))
@@ -140,9 +158,7 @@ function resolveSyncTag() {
   ).map((release) => release.tagName)
   const picked = pickSyncTag({ mergedTags: lines(git('tag', '--merged', BASE)), releaseTags })
   if (picked.tag) {
-    // Why only this tag: fetching every upstream tag negotiates against the whole history and can stall for minutes.
-    const ref = `refs/tags/${picked.tag}`
-    run('git', ['fetch', '--no-recurse-submodules', 'upstream', `${ref}:${ref}`])
+    fetchReleaseTag(picked.tag)
   }
   return { ...picked, resumed: false }
 }
