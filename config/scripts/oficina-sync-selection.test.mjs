@@ -96,6 +96,28 @@ describe('Oficina test selection', () => {
     ])
   })
 
+  it('adds the tests and specs Oficina changed against the last merged release', () => {
+    const changed = [
+      'src/main/startup/unrelated.test.ts',
+      'src/renderer/src/components/workspace-split/WorkspacePaneHeader.tsx',
+      'tests/e2e/floating-workspace-pane-height.spec.ts',
+      'src/renderer/src/deleted-by-oficina.test.ts'
+    ]
+    expect(selectOficinaUnitTests(tracked, changed)).toContain('src/main/startup/unrelated.test.ts')
+    expect(selectOficinaUnitTests(tracked, changed)).not.toContain(
+      'src/renderer/src/deleted-by-oficina.test.ts'
+    )
+    expect(selectOficinaUnitTests(tracked, changed)).not.toContain(
+      'src/renderer/src/components/workspace-split/WorkspacePaneHeader.tsx'
+    )
+    expect(selectOficinaE2eSpecs(tracked, changed)).toContain(
+      'tests/e2e/floating-workspace-pane-height.spec.ts'
+    )
+    expect(selectOficinaE2eSpecs(tracked, changed)).not.toContain(
+      'tests/e2e/golden-quit-relaunch-session.spec.ts'
+    )
+  })
+
   it('selects the split, pane-header and agent-status e2e specs only', () => {
     expect(selectOficinaE2eSpecs(tracked)).toEqual([
       'tests/e2e/oficina-agent-status-receiver.spec.ts',

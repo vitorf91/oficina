@@ -149,7 +149,7 @@ Not covered: agents whose status comes from a plugin or extension that the offic
 
 ## Keeping upstream merges cheap
 
-Upstream files changed for the identity are one-line swaps to `OFICINA_IDENTITY` (see `git diff v1.4.223 --stat`). `config/electron-builder.config.cjs` is untouched. After a sync (next section), check the coexistence checklist: `orca://` still resolves to Orca, `/usr/local/bin/orca` still points into Orca.app, and `~/.orca` and the user agent configs are unchanged after a launch.
+Upstream files changed for the identity are one-line swaps to `OFICINA_IDENTITY` (measure against the last merged release: `git diff "$(git tag --merged oficina --sort=-v:refname 'v[0-9]*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)" oficina --stat`). `config/electron-builder.config.cjs` is untouched. After a sync (next section), check the coexistence checklist: `orca://` still resolves to Orca, `/usr/local/bin/orca` still points into Orca.app, and `~/.orca` and the user agent configs are unchanged after a launch.
 
 ## Syncing with Orca
 
@@ -159,7 +159,8 @@ Upstream files changed for the identity are one-line swaps to `OFICINA_IDENTITY`
 git worktree add --detach ~/Documents/oficina-wt/sync-run oficina && cd ~/Documents/oficina-wt/sync-run
 COREPACK_ENABLE_DOWNLOAD_PROMPT=0 fnm exec --using 24 -- pnpm oficina:sync                 # merge, install, gates; leaves a local sync/<tag> branch
 COREPACK_ENABLE_DOWNLOAD_PROMPT=0 fnm exec --using 24 -- pnpm oficina:sync --push --merge  # also open the PR into oficina, then merge it with a merge commit and delete the branch
-COREPACK_ENABLE_DOWNLOAD_PROMPT=0 fnm exec --using 24 -- pnpm oficina:sync --install       # also install over /Applications/Oficina.app (refuses while Oficina runs)
+COREPACK_ENABLE_DOWNLOAD_PROMPT=0 fnm exec --using 24 -- pnpm oficina:sync --install       # also install over /Applications/Oficina.app (refuses up front while Oficina runs)
+COREPACK_ENABLE_DOWNLOAD_PROMPT=0 fnm exec --using 24 -- pnpm oficina:sync --gates-only    # no merge: install and run the gates on this checkout
 ```
 
 Flags combine; `--merge` needs `--push`. `--commit-trailer=<line>` adds a line to the merge commit message and `--notes-file=<path>` appends a file to the PR body (conflict notes). After `--merge`, fast-forward the main clone: `git fetch origin && git merge --ff-only origin/oficina`.
@@ -172,13 +173,13 @@ What it does, in order:
 4. Installs dependencies with the frozen lockfile (root and `mobile/`), then runs the gates below in order and stops at the first failure. Nothing is pushed or installed unless every gate passed.
 5. Prints a summary with the tag, each gate and its duration; the PR body carries the same table.
 
-| Gate              | What it covers                                                                                                                                                                                                                                                            |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm tc`         | Node, CLI and web TypeScript projects compile against the merged upstream.                                                                                                                                                                                                |
-| Unit tests        | Every tracked test whose file name contains `oficina`, `workspace-split` or `workspace-pane`: the identity module and its CJS mirror, the builder wrapper, the sync selection logic, the split layout, storage, drop and pane code. Listed in the output before they run. |
-| E2E specs         | `workspace-split-*`, `workspace-pane-header` and `oficina-agent-status-receiver` specs through the repo's Playwright harness, whose global setup builds with `electron-vite build --mode e2e`. They use disposable user data and HOME, never the real Oficina profile.    |
-| Changed-code lint | `check-changed-code-quality.mjs` against the release tag: every line Oficina changed on top of upstream, under the new release's lint rules.                                                                                                                              |
-| Packaged build    | `oficina-local.mjs build`: JS build, native helpers, electron-builder, local signing. It refuses a dirty tree, stamps the build id from `HEAD`, and fails if `app.asar` holds test output or the stamp is not `HEAD`.                                                     |
+| Gate              | What it covers                                                                                                                                                                                                                                                                                                                                          |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm tc`         | Node, CLI and web TypeScript projects compile against the merged upstream.                                                                                                                                                                                                                                                                              |
+| Unit tests        | Every tracked test file Oficina changed against the last merged release, plus every tracked test whose file name contains `oficina`, `workspace-split` or `workspace-pane`: the identity module and its CJS mirror, the builder wrapper, the sync selection logic, the split layout, storage, drop and pane code. Listed in the output before they run. |
+| E2E specs         | Every spec Oficina changed against the last merged release, plus the `workspace-split-*`, `workspace-pane-header` and `oficina-agent-status-receiver` specs through the repo's Playwright harness, whose global setup builds with `electron-vite build --mode e2e`. They use disposable user data and HOME, never the real Oficina profile.             |
+| Changed-code lint | `check-changed-code-quality.mjs` against the release tag: every line Oficina changed on top of upstream, under the new release's lint rules.                                                                                                                                                                                                            |
+| Packaged build    | `oficina-local.mjs build`: JS build, native helpers, electron-builder, local signing. It refuses a dirty tree, stamps the build id from `HEAD`, and fails if `app.asar` holds test output or the stamp is not `HEAD`.                                                                                                                                   |
 
 The gates cannot tell whether the app feels right. After an install, launch Oficina once and run the coexistence checklist above.
 
