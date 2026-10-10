@@ -96,6 +96,7 @@ function useStartupHoldHarness(props: HarnessProps) {
     pairedRuntimeParkingEnvironmentIds: new Set<string>(),
     pendingStartupByTabId: {},
     renderedActiveWorktreeId: props.worktreeId,
+    visibleWorkspaceIds: props.worktreeId ? [props.worktreeId] : [],
     setBackgroundMountRevision,
     startupTerminalTabHoldRef,
     startupWorktreeRefreshCompleted: props.gateOpen,

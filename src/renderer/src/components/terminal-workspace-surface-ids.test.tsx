@@ -131,6 +131,7 @@ describe('workspace surface ids', () => {
       pairedRuntimeParkingEnvironmentIds: new Set(),
       pendingStartupByTabId: {},
       renderedActiveWorktreeId: 'repo::/worktree-0',
+      visibleWorkspaceIds: ['repo::/worktree-0'],
       tabsByWorktree: {},
       terminalParkingEnabled: true,
       terminalSshParkingEnabled: true,

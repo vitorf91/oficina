@@ -13,7 +13,7 @@ import { activateAndRevealWorkspace } from '@/lib/worktree-activation'
 import { findWorkspaceSplitGroup } from '@/lib/workspace-split-layout'
 import { resolveWorktreeDisplayName } from '@/lib/worktree-default-display-name'
 import { useAppStore } from '@/store'
-import { useAllWorktrees } from '@/store/selectors'
+import { useAllWorktrees, useRepoMap } from '@/store/selectors'
 import { folderWorkspaceKey } from '../../../../shared/workspace-scope'
 import { unsplitWorkspaceAndFocusPartner } from '../workspace-split/unsplit-workspace'
 
@@ -29,17 +29,16 @@ export function WorkspaceSplitMenuItems({
 }): React.JSX.Element | null {
   const allWorktrees = useAllWorktrees()
   const folders = useAppStore((state) => state.folderWorkspaces)
-  const repos = useAppStore((state) => state.repos)
+  const repoMap = useRepoMap()
   const groups = useAppStore((state) => state.workspaceSplitGroups)
   const placeWorkspaceAtEdge = useAppStore((state) => state.placeWorkspaceAtEdge)
   const isSplit = findWorkspaceSplitGroup(groups, worktreeId) !== null
   const candidates = useMemo(() => {
-    const projectNames = new Map(repos.map((repo) => [repo.id, repo.displayName]))
     const options: SplitCandidate[] = [
       ...allWorktrees.map((worktree) => ({
         id: worktree.id,
         name: resolveWorktreeDisplayName(worktree),
-        project: projectNames.get(worktree.repoId) ?? ''
+        project: repoMap.get(worktree.repoId)?.displayName ?? ''
       })),
       ...folders.map((folder) => ({
         id: folderWorkspaceKey(folder.id),
@@ -59,7 +58,7 @@ export function WorkspaceSplitMenuItems({
       seen.add(option.id)
       return true
     })
-  }, [allWorktrees, folders, groups, repos, worktreeId])
+  }, [allWorktrees, folders, groups, repoMap, worktreeId])
 
   if (isSplit) {
     return (

@@ -14,9 +14,26 @@ test('three workspaces from two projects sit side by side with a fourth below', 
   registerPostElectronShutdownCleanup
 }, testInfo) => {
   test.setTimeout(240_000)
+  const pageErrors: string[] = []
+  orcaPage.on('pageerror', (error) => pageErrors.push(error.message))
+  orcaPage.on('console', (message) => {
+    if (message.type() === 'error') {
+      pageErrors.push(message.text())
+    }
+  })
+  // Evidence frames: hide the unrelated onboarding card and tooltip that float over the sidebar
+  // in a fresh profile, and wait until every terminal has painted its prompt, so a capture
+  // never shows a half-drawn pane.
+  await orcaPage.addStyleTag({
+    content: '[data-setup-script-prompt-layer], [role="tooltip"] { display: none !important }'
+  })
   const shot = async (name: string) => {
     const dir = SHOTS_DIR ?? testInfo.outputDir
     mkdirSync(dir, { recursive: true })
+    await expect(orcaPage.locator('.xterm:visible')).toHaveCount(4, { timeout: 20_000 })
+    // The renderer draws to a canvas, so there is no text to wait on; give each shell a moment
+    // to print its prompt.
+    await orcaPage.waitForTimeout(1_500)
     await orcaPage.screenshot({ path: path.join(dir, name) })
   }
 
@@ -186,4 +203,6 @@ test('three workspaces from two projects sit side by side with a fourth below', 
   }
   expect(await noSidewaysScroll()).toBe(true)
   await shot('04-small-window.png')
+  // The console stays clean of anything the split touches.
+  expect(pageErrors.filter((message) => /workspace|split|pane/i.test(message))).toEqual([])
 })

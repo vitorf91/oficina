@@ -73,11 +73,10 @@ test('restores a workspace split and its ratio after an app restart', async (// 
       )
       .toBe(beforeRestart)
 
-    // Render-layer proof: opening either member shows both panes, divided as left.
-    await second.page
-      .locator(`[role="option"][data-worktree-id="${ids.right}"]`)
-      .click({ timeout: 30_000 })
-    await expect(second.page.locator('[data-workspace-split="true"]')).toBeVisible()
+    // Render-layer proof: a restored member shows both panes straight away, divided as left.
+    await expect(second.page.locator('[data-workspace-split="true"]')).toBeVisible({
+      timeout: 30_000
+    })
     const surface = (id: string) => second.page.locator(`[data-workspace-surface-id="${id}"]`)
     await expect(surface(ids.left)).toBeVisible()
     await expect(surface(ids.right)).toBeVisible()

@@ -182,3 +182,43 @@ test('sidebar pairing, member navigation, unsplit, drag and persistence keep ful
   await expect(split).toHaveCount(0)
   await expect(row(firstId)).toHaveAttribute('aria-current', 'page')
 })
+
+test('two workspaces without any tab still split into empty panes that can start a terminal', async ({
+  orcaPage
+}) => {
+  test.setTimeout(120_000)
+  const [firstId, secondId] = await orcaPage.evaluate(() => {
+    const state = window.__store!.getState()
+    const worktrees = Object.values(state.worktreesByRepo).find((items) => items.length >= 2)!
+    return worktrees.slice(0, 2).map((worktree) => worktree.id)
+  })
+  const surface = (id: string) => orcaPage.locator(`[data-workspace-surface-id="${id}"]`)
+  // Empty both workspaces through the store, then pair them.
+  await orcaPage.evaluate(
+    ([a, b]) => {
+      const state = window.__store!.getState()
+      for (const id of [a, b]) {
+        for (const tab of window.__store!.getState().tabsByWorktree[id] ?? []) {
+          state.closeTab(tab.id)
+        }
+      }
+      window.__store!.getState().placeWorkspaceAtEdge(b, a, 'right')
+      window.__store!.getState().setActiveWorktree(a)
+    },
+    [firstId, secondId]
+  )
+  await expect(orcaPage.locator('[data-workspace-split="true"]')).toBeVisible()
+  await expect(surface(firstId)).toBeVisible()
+  await expect(surface(secondId)).toBeVisible()
+  // Both panes render inside the split; nothing else paints a terminal outside a pane.
+  await expect(orcaPage.locator('.xterm:visible')).toHaveCount(0)
+  await expect(orcaPage.locator('[data-workspace-pane-header]:visible')).toHaveCount(2)
+  const empty = surface(secondId).locator('[data-workspace-empty-pane]')
+  if (await empty.isVisible()) {
+    await empty.getByRole('button', { name: 'New terminal' }).click()
+    await expect(surface(secondId).locator('.xterm:visible')).toHaveCount(1)
+  }
+  await expect(
+    orcaPage.locator('.xterm:visible').locator('xpath=ancestor::*[@data-workspace-surface-id]')
+  ).toHaveCount(await orcaPage.locator('.xterm:visible').count())
+})

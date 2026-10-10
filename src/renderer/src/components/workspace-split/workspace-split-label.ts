@@ -1,7 +1,8 @@
 // Adapted from brooksgolden/orca, feature/sessions-grid-custom, MIT.
 import { resolveWorktreeDisplayName } from '@/lib/worktree-default-display-name'
-import { folderWorkspaceKey } from '../../../../shared/workspace-scope'
+import { getRepoMapFromState, getWorktreeMapFromState } from '@/store/selectors'
 import type { AppState } from '@/store/types'
+import { folderWorkspaceKey } from '../../../../shared/workspace-scope'
 
 type WorkspaceLabelState = Pick<AppState, 'worktreesByRepo' | 'repos' | 'folderWorkspaces'>
 
@@ -12,16 +13,13 @@ export function resolveWorkspaceLabelParts(
   state: WorkspaceLabelState,
   workspaceId: string
 ): WorkspaceLabel {
-  const folder = state.folderWorkspaces.find((item) => folderWorkspaceKey(item.id) === workspaceId)
-  if (folder) {
-    return { name: folder.name, project: '' }
-  }
-  for (const [repoId, worktrees] of Object.entries(state.worktreesByRepo)) {
-    const worktree = worktrees.find((item) => item.id === workspaceId)
-    if (worktree) {
-      const repo = state.repos.find((item) => item.id === repoId)
-      return { name: resolveWorktreeDisplayName(worktree), project: repo?.displayName ?? '' }
+  const worktree = getWorktreeMapFromState(state).get(workspaceId)
+  if (worktree) {
+    return {
+      name: resolveWorktreeDisplayName(worktree),
+      project: getRepoMapFromState(state).get(worktree.repoId)?.displayName ?? ''
     }
   }
-  return { name: '', project: '' }
+  const folder = state.folderWorkspaces.find((item) => folderWorkspaceKey(item.id) === workspaceId)
+  return { name: folder?.name ?? '', project: '' }
 }
