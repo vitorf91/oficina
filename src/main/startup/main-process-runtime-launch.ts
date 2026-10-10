@@ -10,8 +10,8 @@ import { OrcaRuntimeRpcServer } from '../runtime/runtime-rpc'
 import { registerMobileHandlers } from '../ipc/mobile'
 import { getLocalPtyProvider, registerHeadlessPtyRuntime } from '../ipc/pty'
 import { LocalPtyProvider } from '../providers/local-pty-provider'
-import { HEADLESS_RUNTIME_WINDOW_ID } from '../../shared/runtime-types'
 import { OFICINA_IDENTITY } from '../../shared/oficina-identity'
+import { publishHeadlessRuntimeGraph } from '../runtime/headless-runtime-graph'
 import { OffscreenBrowserBackend } from '../browser/offscreen-browser-backend'
 import { browserManager } from '../browser/browser-manager'
 import { getDesktopRelayStatus, publishDesktopRelayStatus } from './main-process-relay-status'
@@ -27,7 +27,8 @@ import { prepareCodexRuntimeHomeForLaunch } from './codex-launch-preparation'
 import { prepareCodexSessionResumeForLaunch } from './codex-session-resume-launch'
 import { startWindowsDesktopBeforeShellPathReady } from './windows-desktop-shell-path-startup'
 import { repairKnownPoisonedInstallDirBeforeWindow } from './windows-install-dir-acl-recovery'
-import { registerServeSignalHandlers } from './serve-signal-handlers'
+import { installServeQuitHandling } from './serve-quit-handling'
+import { registerHeadlessServeSshHandlers } from './headless-serve-ssh-registration'
 import { settleServeDesktopActivation } from './serve-desktop-activation'
 import {
   recordRuntimeRpcStartFailure,
@@ -74,8 +75,6 @@ function installRuntimeRpc(
   if (isE2E && (!Number.isInteger(e2eWsPort) || e2eWsPort < 0 || e2eWsPort > 65_535)) {
     throw new Error(`Invalid ORCA_E2E_RUNTIME_WS_PORT value: ${requestedE2EWsPort}`)
   }
-  // Why: pin dev to its own port so `pnpm dev` doesn't race the packaged app and fall back to a random port, breaking deterministic mobile pairing/repro (STA-1511).
-  const devWsPort = is.dev && !isE2E ? OFICINA_IDENTITY.devMobileWsPort : undefined
   const runtimeRpc = new OrcaRuntimeRpcServer({
     runtime,
     // Why: mobile pairing needs the stable pre-setName() path (getCanonicalUserDataPath), not a late app.getPath('userData') that drops paired devices across restarts.
@@ -85,7 +84,8 @@ function installRuntimeRpc(
     // `orca serve` is an explicit remote opt-in, and E2E keeps the wide bind its harness connects over.
     exposeNetworkByDefault: Boolean(serveOptions) || isE2E,
     ...(isE2E ? { wsPort: e2eWsPort } : {}),
-    ...(devWsPort !== undefined ? { wsPort: devWsPort } : {}),
+    // Why: pin dev to its own port so `pnpm dev` doesn't race the packaged app and fall back to a random port, breaking deterministic mobile pairing/repro (STA-1511).
+    ...(is.dev && !isE2E ? { wsPort: OFICINA_IDENTITY.devMobileWsPort } : {}),
     ...(serveOptions?.wsPort !== undefined
       ? {
           wsPort: serveOptions.wsPort,
@@ -158,8 +158,9 @@ async function launchServeMode(
       })
     )
   }
-  // Why: headless servers have no renderer graph publisher; publish an explicit empty graph so status clients see a ready server.
-  runtime.syncWindowGraph(HEADLESS_RUNTIME_WINDOW_ID, { tabs: [], leaves: [] })
+  publishHeadlessRuntimeGraph(runtime)
+  // Why before RPC binds: the first paired client must already see this host's SSH targets.
+  registerHeadlessServeSshHandlers(state.store!, runtime)
   await runtimeRpc.start().catch((error) => {
     console.error('[runtime] Failed to start headless RPC transport:', error)
     throw error
@@ -169,8 +170,7 @@ async function launchServeMode(
   // it simply never receives a push, because nothing dispatches notifications here.
   startDesktopPushService(runtimeRpc)
   settleDesktopActivation()
-  // Why: every attempt must reach app.quit(); a page beforeunload can veto an earlier signal.
-  registerServeSignalHandlers(process, () => app.quit())
+  installServeQuitHandling()
   // Why: headless serve has no renderer to run the normal cli:install flow; do it here for macOS/Linux only (Windows-excluded: install() only mutates registry PATH, not child terminals).
   if (process.platform === 'darwin' || process.platform === 'linux') {
     try {
