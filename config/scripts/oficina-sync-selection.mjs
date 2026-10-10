@@ -43,17 +43,29 @@ export function pickSyncTag({ mergedTags, releaseTags }) {
 
 const UNIT_TEST_FILE = /\.test\.[cm]?[jt]sx?$/
 const UNIT_TEST_NAME = /oficina|workspace-split|workspace-pane/
-const E2E_SPEC_FILE =
+const E2E_SPEC_FILE = /^tests\/e2e\/[^/]+\.spec\.ts$/
+const E2E_SPEC_NAME =
   /^tests\/e2e\/(?:workspace-split-[^/]*|workspace-pane-header|oficina-[^/]*)\.spec\.ts$/
 
-// Why by name, from the tracked files: Oficina's own tests need no list to maintain, and a test
-// added by the next feature joins the gate by following the naming.
-export function selectOficinaUnitTests(trackedFiles) {
-  return trackedFiles
-    .filter((file) => UNIT_TEST_FILE.test(file) && UNIT_TEST_NAME.test(file.split('/').at(-1)))
-    .sort()
+// Why two sources: the naming rule keeps Oficina's own tests in the gate with no list to maintain,
+// and the files Oficina changed against the last merged release catch the rest (a split test in a
+// folder of that name, a PascalCase file, an upstream test Oficina had to edit).
+export function selectOficinaUnitTests(trackedFiles, oficinaChangedFiles = []) {
+  const tracked = new Set(trackedFiles)
+  const byName = trackedFiles.filter(
+    (file) => UNIT_TEST_FILE.test(file) && UNIT_TEST_NAME.test(file.split('/').at(-1))
+  )
+  const byChange = oficinaChangedFiles.filter(
+    (file) => tracked.has(file) && UNIT_TEST_FILE.test(file)
+  )
+  return [...new Set([...byName, ...byChange])].sort()
 }
 
-export function selectOficinaE2eSpecs(trackedFiles) {
-  return trackedFiles.filter((file) => E2E_SPEC_FILE.test(file)).sort()
+export function selectOficinaE2eSpecs(trackedFiles, oficinaChangedFiles = []) {
+  const tracked = new Set(trackedFiles)
+  const byName = trackedFiles.filter((file) => E2E_SPEC_NAME.test(file))
+  const byChange = oficinaChangedFiles.filter(
+    (file) => tracked.has(file) && E2E_SPEC_FILE.test(file)
+  )
+  return [...new Set([...byName, ...byChange])].sort()
 }

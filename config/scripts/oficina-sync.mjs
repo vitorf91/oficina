@@ -55,6 +55,9 @@ function run(command, args, { cwd = repoRoot, env = {} } = {}) {
     stdio: 'inherit',
     env: { ...process.env, ...env }
   })
+  if (result.error) {
+    throw new Error(`${command} ${args.join(' ')} could not start: ${result.error.message}`)
+  }
   if (result.status !== 0) {
     throw new Error(`${command} ${args.join(' ')} exited with ${result.status ?? result.signal}`)
   }
@@ -82,6 +85,13 @@ function assertReady() {
     throw new Error(
       `Node ${required} is required (running ${process.versions.node}). Run: COREPACK_ENABLE_DOWNLOAD_PROMPT=0 fnm exec --using ${required} -- pnpm oficina:sync`
     )
+  }
+  // Why here: install refuses a running Oficina, and finding that out after the merge and build is late.
+  if (
+    process.argv.includes('--install') &&
+    spawnSync('pgrep', ['-f', '/Applications/Oficina.app/Contents/']).status === 0
+  ) {
+    throw new Error('Oficina is running; quit it before a sync with --install.')
   }
   const dirty = git('status', '--porcelain', '--untracked-files=all')
   if (dirty) {
@@ -192,13 +202,14 @@ function createMergedBranch({ tag, lastMerged }) {
 
 function testSelections() {
   const tracked = lines(git('ls-files'))
-  const unitTests = selectOficinaUnitTests(tracked)
-  const e2eSpecs = selectOficinaE2eSpecs(tracked)
+  // Why against the newest release merged into HEAD: that diff is exactly Oficina's footprint.
+  const lastMerged = newestStableTag(lines(git('tag', '--merged', 'HEAD')))
+  const changed = lastMerged ? lines(git('diff', '--name-only', lastMerged, 'HEAD')) : []
+  const unitTests = selectOficinaUnitTests(tracked, changed)
+  const e2eSpecs = selectOficinaE2eSpecs(tracked, changed)
   // Why a floor: a renamed pattern that matches nothing would otherwise turn a gate into a pass.
   if (unitTests.length === 0 || e2eSpecs.length === 0) {
-    throw new Error(
-      'No Oficina unit tests or e2e specs found by name; fix oficina-sync-selection.mjs.'
-    )
+    throw new Error('No Oficina unit tests or e2e specs found; fix oficina-sync-selection.mjs.')
   }
   console.log(`[oficina-sync] unit tests (${unitTests.length}):\n  ${unitTests.join('\n  ')}`)
   console.log(`[oficina-sync] e2e specs (${e2eSpecs.length}):\n  ${e2eSpecs.join('\n  ')}`)
@@ -375,6 +386,7 @@ function openPullRequest({ tag, lastMerged, branch, results, resumed }, forkSlug
 }
 
 function mergePullRequest({ tag, branch }, prUrl, forkSlug) {
+  const trailer = optionValue('commit-trailer')
   const number = /\/pull\/(\d+)/.exec(prUrl)[1]
   // Why --merge and no --delete-branch: a merge commit keeps upstream history, and gh's own branch
   // cleanup tries to check out `oficina`, which another worktree holds.
@@ -386,7 +398,8 @@ function mergePullRequest({ tag, branch }, prUrl, forkSlug) {
     forkSlug,
     '--merge',
     '--subject',
-    `chore(sync): merge Orca ${tag} (#${number})`
+    `chore(sync): merge Orca ${tag} (#${number})`,
+    ...(trailer ? ['--body', trailer] : [])
   ])
   run('git', ['push', 'origin', '--delete', branch])
   const merged = JSON.parse(
