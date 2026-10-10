@@ -191,6 +191,13 @@ The script aborts the merge (no half-merged state, no leftover branch), lists th
 
 Prefer resolutions that shrink Oficina's footprint in upstream files, so the next merge is cheaper.
 
+Things the first real sync (v1.4.224, 268 commits) taught:
+
+- Run `pnpm install --frozen-lockfile` before the hand `git commit`: it runs the pre-commit hook (`lint-staged`) over the whole upstream diff. That hook enforces the repo's lint rules on files Oficina touched (an upstream file sitting at the 300-line `max-lines` limit failed on Oficina's one extra import line; shorten the code, never add a disable) and `oxfmt --write` can reformat an upstream file that is not formatter-clean, which moved a lint-disable comment off the line it covered. After the commit, compare `git diff --name-only <tag> HEAD` with Oficina's own files and fix any other file by hand.
+- A clean-looking merge can still fail the gates where an upstream change meets Oficina's: a new upstream test built params without a field the workspace split makes required. Fix each in its own commit on the `sync/<tag>` branch with the smallest edit, and list it in the notes file.
+- The gates run only Oficina's tests. For a large release also run the unit suite over every directory Oficina touches, for example `git diff --name-only <old tag> oficina -- src | xargs -n1 dirname | sort -u` passed to `node node_modules/vitest/vitest.mjs run --config config/vitest.config.ts`. On the first sync two tests failed for host reasons only: `src/main/codex-cli/command.test.ts` finds the `claude` and `codex` links in `/usr/local/bin`, and `git-admission-storm-measurement.test.ts` times out under load and passes alone.
+- Take upstream's version of `.github/workflows/*` whole: Oficina never edits workflows, and Actions are disabled on the fork.
+
 ### Cadence and rules
 
 - Weekly, and whenever the Orca phone app updates: the phone refuses a desktop whose protocol is older than it expects, so a lagging Oficina stops pairing.
