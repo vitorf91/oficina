@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { TabGroupLayoutNode } from '../../../../shared/tab-types'
 import { useAppStore } from '../../store'
 import TabGroupPanel, { type TabGroupPanelTabStrip } from './TabGroupPanel'
+import { useWorkspacePane } from '../workspace-split/workspace-pane-context'
 import type { HoveredTabInsertion } from './useTabDragSplit'
 
 const MIN_RATIO = 0.15
@@ -176,6 +177,7 @@ function SplitNode({
 }): React.JSX.Element {
   const setTabGroupSplitRatio = useAppStore((state) => state.setTabGroupSplitRatio)
   const recordFeatureInteraction = useAppStore((state) => state.recordFeatureInteraction)
+  const workspacePane = useWorkspacePane()
 
   if (node.type === 'leaf') {
     return (
@@ -187,7 +189,7 @@ function SplitNode({
         // survive worktree switches, but only the visible worktree may own the
         // global terminal shortcuts. If an offscreen group's pane stays
         // "focused", Cmd/Ctrl+W and split shortcuts can hit the wrong worktree.
-        isFocused={isWorktreeActive && node.groupId === focusedGroupId}
+        isFocused={isWorktreeActive && workspacePane.focused && node.groupId === focusedGroupId}
         hasSplitGroups={hasSplitGroups}
         tabStrip={tabStrip}
         markdownAnnotationsEnabled={markdownAnnotationsEnabled}
@@ -197,8 +199,12 @@ function SplitNode({
         suppressLeftBorder={suppressLeftBorder}
         suppressRightBorder={suppressRightBorder}
         suppressBottomBorder={suppressBottomBorder}
-        reserveClosedExplorerToggleSpace={touchesTopEdge && touchesRightEdge}
-        reserveCollapsedSidebarHeaderSpace={touchesTopEdge && touchesLeftEdge}
+        reserveClosedExplorerToggleSpace={
+          touchesTopEdge && touchesRightEdge && !workspacePane.headerOwnsWindowChrome
+        }
+        reserveCollapsedSidebarHeaderSpace={
+          touchesTopEdge && touchesLeftEdge && !workspacePane.headerOwnsWindowChrome
+        }
         isTabDragActive={isTabDragActive}
         hoveredTabInsertion={
           hoveredTabInsertion?.groupId === node.groupId ? hoveredTabInsertion : null

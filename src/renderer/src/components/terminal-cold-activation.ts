@@ -165,6 +165,11 @@ export function applyTerminalColdActivation(controller: TerminalParkingFoundatio
       })
     }
     mountedWorktreeIdsRef.current.add(renderedActiveWorktreeId)
+    // A split partner has its own layout and live PTYs before it takes keyboard focus, so it
+    // mounts now rather than waiting behind the cold-activation deferral.
+    for (const id of controller.visibleWorkspaceIds) {
+      mountedWorktreeIdsRef.current.add(id)
+    }
   } else {
     lastActivationWorktreeIdRef.current = null
   }

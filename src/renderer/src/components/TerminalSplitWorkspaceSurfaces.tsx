@@ -2,6 +2,9 @@ import { useAnyBrowserGuestNeedsPaint } from './browser-pane/host-guest/browser-
 import { WorktreeSplitSurface } from './TerminalWorktreeSplitSurface'
 import { selectParkedEquivalentMountTabIds } from './terminal/startup-terminal-tab-hold'
 import type { TerminalController } from './use-terminal-controller'
+import { WorkspaceDropPreview } from './workspace-split/WorkspaceDropPreview'
+import { WorkspaceSplitLayoutSlots } from './workspace-split/WorkspaceSplitLayoutSlots'
+import { useWorkspaceSplitSurfaces } from './workspace-split/use-workspace-split-surfaces'
 
 export function TerminalSplitWorkspaceSurfaces({
   controller
@@ -13,7 +16,6 @@ export function TerminalSplitWorkspaceSurfaces({
     activeGroupIdByWorktree,
     activeView,
     activityTerminalPortals,
-    anyMountedWorktreeHasLayout,
     backgroundMountTabIdsByWorktreeRef,
     effectiveActiveLayout,
     effectiveParkedTerminalWorktreeIds,
@@ -29,27 +31,40 @@ export function TerminalSplitWorkspaceSurfaces({
   // remote controller needs each to drop `hidden` — the per-worktree surface hatch below cannot
   // override an ancestor that stopped compositing.
   const retainBrowserGuestPaint = useAnyBrowserGuestNeedsPaint(!effectiveActiveLayout)
-  if (!anyMountedWorktreeHasLayout) {
+  const split = useWorkspaceSplitSurfaces(controller)
+  if (!split.rendersRoot) {
     return null
   }
   return (
     <div
+      ref={split.rootRef}
       className={`relative flex flex-1 min-w-0 min-h-0 overflow-hidden${
-        effectiveActiveLayout
+        effectiveActiveLayout || split.group
           ? ''
           : retainBrowserGuestPaint
             ? ' opacity-0 pointer-events-none'
             : ' hidden'
       }`}
     >
+      {split.group ? (
+        <WorkspaceSplitLayoutSlots
+          layout={split.group.layout}
+          onRectsChange={split.setPaneRects}
+          onRatioChange={split.onRatioChange}
+        />
+      ) : null}
       {workspaceSurfaces
         .filter((workspace) => mountedWorktreeIdsRef.current.has(workspace.id))
         .map((workspace) => {
           const layout = getEffectiveLayoutForWorktree(workspace.id)
-          if (!layout) {
+          // A split member without tabs still gets a pane, so it can be given a first terminal.
+          const isSplitMember = split.group !== null && split.visibleIds.includes(workspace.id)
+          if (!layout && !isSplitMember) {
             return null
           }
-          const isVisible = activeView === 'terminal' && workspace.id === renderedActiveWorktreeId
+          const isVisible =
+            activeView === 'terminal' &&
+            (split.group ? isSplitMember : workspace.id === renderedActiveWorktreeId)
           const shouldMeasureHiddenWorktree =
             !isVisible && measurableBackgroundWorktreeIdsRef.current.has(workspace.id)
           const shouldColdParkTerminalPanes =
@@ -61,7 +76,8 @@ export function TerminalSplitWorkspaceSurfaces({
               key={`tab-groups-${workspace.id}`}
               worktreeId={workspace.id}
               worktreePath={workspace.path}
-              layout={layout}
+              layout={layout ?? null}
+              {...split.surfaceProps(workspace.id, isVisible)}
               focusedGroupId={activeGroupIdByWorktree[workspace.id]}
               isVisible={isVisible}
               shouldMeasureHiddenWorktree={shouldMeasureHiddenWorktree}
@@ -79,6 +95,9 @@ export function TerminalSplitWorkspaceSurfaces({
             />
           )
         })}
+      {split.hover?.wholeWindow ? (
+        <WorkspaceDropPreview edge={split.hover.edge} scope="window" />
+      ) : null}
     </div>
   )
 }

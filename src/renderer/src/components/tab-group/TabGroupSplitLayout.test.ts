@@ -25,6 +25,12 @@ vi.mock('../../store', () => ({
   ) => useAppStoreMock(selector)
 }))
 
+// Why: these tests call the components as plain functions, outside a React render, so the
+// workspace pane context hook cannot run; a lone workspace is the stock behavior it defaults to.
+vi.mock('../workspace-split/workspace-pane-context', () => ({
+  useWorkspacePane: () => ({ focused: true, headerOwnsWindowChrome: false })
+}))
+
 vi.mock('./TabGroupPanel', () => ({
   default: (props: unknown) => ({ __mock: 'TabGroupPanel', props })
 }))

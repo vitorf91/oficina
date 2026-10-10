@@ -1,4 +1,11 @@
 {
+  "workspaceSplit": {
+    "newTerminal": "新建终端",
+    "paneLimit": "一个拆分最多可包含 {{count}} 个工作区",
+    "removePane": "从拆分中移除工作区",
+    "splitWith": "与工作区拆分",
+    "unsplit": "取消拆分工作区"
+  },
   "app": {
     "recoverableError": {
       "rootTitle": "Orca 遇到渲染器错误。",

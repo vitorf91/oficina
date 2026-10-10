@@ -91,6 +91,7 @@ function Watcher({ restored = true, hydrated = false, worktreeId = 'wt-1' } = {}
     pairedRuntimeParkingEnvironmentIds: new Set(),
     pendingStartupByTabId: {},
     renderedActiveWorktreeId: worktreeId,
+    visibleWorkspaceIds: [worktreeId],
     startupTerminalTabHold: null,
     terminalParkingEnabled: false,
     terminalProviderSnapshotCapabilityRevision: 0,

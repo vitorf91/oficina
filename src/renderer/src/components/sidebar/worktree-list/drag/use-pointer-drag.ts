@@ -2,7 +2,7 @@ import { useCallback, useEffect } from 'react'
 import type React from 'react'
 import type { WorkspaceStatus, Worktree } from '../../../../../../shared/worktree/types'
 import { getWorktreeHostIdentity } from '../../../../../../shared/worktree/host-qualified-identity'
-import { hasWorkspaceKanbanSidebarDropBoard } from '../../workspace-kanban-sidebar-drop'
+import { acquireWebviewsDragPassthrough } from '../../../browser-pane/host-guest/webview-drag-passthrough'
 import {
   createSidebarDragPreview,
   isSidebarPointerDragBlocked,
@@ -10,7 +10,6 @@ import {
 } from '../../worktree-sidebar-pointer-drag-dom'
 import { getWorktreeSidebarDragRectsForGroup } from '../../worktree-sidebar-drag-autoscroll'
 import { getWorktreeSidebarDragGrab } from '../../worktree-sidebar-drag-geometry'
-import { NOOP_WORKSPACE_BOARD_DRAG_PREVIEW_CALLBACK } from './drop-commit-context'
 import type {
   WorktreeDropCommitContext,
   WorktreeStatusDropAtIndexArgs
@@ -116,6 +115,9 @@ export function useWorktreePointerDrag(args: {
         draggedCount: drag.draggedIds.length
       })
       drag.active = true
+      // Why: a card can be dropped on a workspace pane; a browser pane's guest would swallow
+      // the pointer stream and strand the drag over it.
+      drag.releaseWebviewDragPassthrough = acquireWebviewsDragPassthrough()
       drag.preview = preview
       drag.previewOffsetX = offsetX
       drag.previewOffsetY = offsetY
@@ -170,16 +172,6 @@ export function useWorktreePointerDrag(args: {
         return
       }
       const rects = getWorktreeSidebarDragRectsForGroup(container, sourceGroupKey)
-      const canPreviewWorkspaceBoardOnDrag =
-        !workspaceBoardOpen &&
-        onWorkspaceBoardDragPreviewStart !== NOOP_WORKSPACE_BOARD_DRAG_PREVIEW_CALLBACK
-      if (
-        rects.length <= 1 &&
-        !hasWorkspaceKanbanSidebarDropBoard() &&
-        !canPreviewWorkspaceBoardOnDrag
-      ) {
-        return
-      }
       const draggedIds =
         selectedWorktreeIds.has(getWorktreeHostIdentity(worktree)) && selectedWorktrees.length > 1
           ? selectedWorktrees.map((worktree) => worktree.id)
@@ -213,15 +205,7 @@ export function useWorktreePointerDrag(args: {
         latestStatusDropTarget: null
       }
     },
-    [
-      onWorkspaceBoardDragPreviewStart,
-      scrollRef,
-      selectedWorktreeIds,
-      selectedWorktrees,
-      session,
-      workspaceBoardOpen,
-      worktreePointerDragRef
-    ]
+    [scrollRef, selectedWorktreeIds, selectedWorktrees, session, worktreePointerDragRef]
   )
 
   const handleWorktreeRowClickCapture = useCallback(

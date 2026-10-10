@@ -3,6 +3,7 @@ import { useAppStore } from '../../store'
 import { armFloatingPanelReclaimIntent } from '@/lib/floating-workspace-focus-reclaim'
 import { isFloatingWorkspacePanelFocused } from '@/lib/floating-workspace-terminal-actions'
 import { selectFloatingVisibleTabCount } from '@/store/selectors'
+import { collapseEmptyWorkspaceSplit } from '@/lib/collapse-empty-workspace-split'
 
 /**
  * What a close does if it leaves its workspace with no tabs. Capture it when the close is requested
@@ -29,11 +30,18 @@ export function captureWorkspaceEmptiedReaction(
 
 function leaveWorktreeIfEmpty(worktreeId: string): void {
   const state = useAppStore.getState()
+  // An emptied pane of a workspace split is removed from the split instead of left blank.
+  if (collapseEmptyWorkspaceSplit(state, worktreeId)) {
+    return
+  }
   if (state.activeWorktreeId !== worktreeId) {
     return
   }
   // Why: split-group closes bypass legacy Terminal.tsx; deselect the emptied worktree here or the window goes blank instead of landing.
   if (state.reconcileWorktreeTabModel(worktreeId).renderableTabCount === 0) {
+    if (collapseEmptyWorkspaceSplit(useAppStore.getState(), worktreeId)) {
+      return
+    }
     state.setActiveWorktree(null)
   }
 }

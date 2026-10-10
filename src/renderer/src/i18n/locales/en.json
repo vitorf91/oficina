@@ -1,4 +1,11 @@
 {
+  "workspaceSplit": {
+    "newTerminal": "New terminal",
+    "paneLimit": "A split can contain up to {{count}} workspaces",
+    "removePane": "Remove workspace from split",
+    "splitWith": "Split with workspace",
+    "unsplit": "Unsplit workspace"
+  },
   "csv": {
     "detectingDelimiter": "Detecting delimiter…",
     "indexProgress": "Indexing CSV… {{percent}}%",

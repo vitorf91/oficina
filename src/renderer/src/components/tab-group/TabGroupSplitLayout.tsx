@@ -1,6 +1,7 @@
 import type { TabGroupLayoutNode } from '../../../../shared/tab-types'
 import { TabGroupSplitNodeTree } from './TabGroupSplitNodeTree'
 import { WorkspaceTabDragLayer } from './WorkspaceTabDragLayer'
+import { useWorkspacePane } from '../workspace-split/workspace-pane-context'
 
 /** The main workspace surface: the shared drag scope and group tree under main-window chrome
  *  (drag strip, left seam border). Hosts with their own chrome compose the two parts directly. */
@@ -15,8 +16,12 @@ export default function TabGroupSplitLayout({
   focusedGroupId?: string
   isWorktreeActive: boolean
 }): React.JSX.Element {
+  const workspacePane = useWorkspacePane()
   return (
-    <WorkspaceTabDragLayer worktreeId={worktreeId} enabled={isWorktreeActive}>
+    <WorkspaceTabDragLayer
+      worktreeId={worktreeId}
+      enabled={isWorktreeActive && workspacePane.focused}
+    >
       {({ isTabDragActive, hoveredTabInsertion, setDragRootNode }) => (
         /* Why: the 10px drag strip sits ABOVE the split layout — lifted out of
           each pane — so vertical split resize handles don't extend into the

@@ -116,7 +116,9 @@ export function renderFolderWorkspaceVirtualRow(args: {
           isCurrentWorktree={ctx.currentWorktreeId === folderWorktree.id}
           contentIndent={cardContentIndent}
           flushSurface
-          nativeDragEnabled={false}
+          // Folder cards are not sidebar-orderable, so they carry the native workspace drag payload
+          // that visible workspace panes accept as a split drop.
+          nativeDragEnabled
           onImmediateActivate={activationDisabled ? undefined : ctx.onImmediateActivate}
           activationRowKey={folderWorktree.id}
           onSelectionGesture={(event) => ctx.onSelectionGesture(event, folderWorktree)}

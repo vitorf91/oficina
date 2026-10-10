@@ -102,4 +102,6 @@ export async function tearDownRemovedWorktreeRendererState(args: {
   // Optional-chained: minimal store assemblies (some unit tests) omit the generation slices.
   get().prunePullRequestGenerationRecords?.(liveWorktreeKeys)
   get().pruneCommitMessageGenerationRecords?.(liveWorktreeKeys)
+  // A deleted workspace cannot stay a pane of a split group.
+  get().unsplitWorkspace?.(worktreeId)
 }

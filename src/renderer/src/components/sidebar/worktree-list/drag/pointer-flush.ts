@@ -2,12 +2,15 @@ import type React from 'react'
 import type { WorkspaceStatus } from '../../../../../../shared/worktree/types'
 import {
   clearWorkspaceKanbanSidebarDropTargetVisual,
-  hasWorkspaceKanbanSidebarDropBoard,
   isWorkspaceKanbanSidebarDropPointInBoard,
   updateWorkspaceKanbanSidebarDropTargetVisual
 } from '../../workspace-kanban-sidebar-drop'
 import { updateSidebarDragPreviewPosition } from '../../worktree-sidebar-pointer-drag-dom'
-import { getPointerDropStatusTarget, shouldPreferSidebarStatusDropTarget } from './status-target'
+import {
+  getPointerDropStatusTarget,
+  isPointBesideSidebar,
+  shouldPreferSidebarStatusDropTarget
+} from './status-target'
 import type { WorktreeDropCommitContext } from './drop-commit-context'
 import {
   applyWorktreeDropPreview,
@@ -98,15 +101,8 @@ export function flushWorktreePointerDragFrame(args: WorktreePointerDragFrameArgs
     ctx.clearWorktreeDrag()
     return
   }
-  // Why: show the board preview as soon as a card drag begins so the drop target is visible up front, not only at the sidebar edge.
-  if (
-    !drag.workspaceBoardDragPreviewRequested &&
-    !args.workspaceBoardOpen &&
-    !hasWorkspaceKanbanSidebarDropBoard()
-  ) {
-    drag.workspaceBoardDragPreviewRequested = true
-    args.onWorkspaceBoardDragPreviewStart()
-  }
+  // The board stays available through its explicit toolbar button. Opening it for every card
+  // drag would cover the workspace panes, which are drop targets for splitting.
   const boardTarget = updateWorkspaceKanbanSidebarDropTargetVisual({
     x: drag.currentX,
     y: drag.currentY,
@@ -132,6 +128,14 @@ export function flushWorktreePointerDragFrame(args: WorktreePointerDragFrameArgs
   }
 
   const sidebarContainer = ctx.scrollRef.current
+  // Why: reorder slots are resolved from Y alone, so a card carried over a workspace pane
+  // would otherwise preview, and on release commit, a sidebar reorder nobody aimed at.
+  if (isPointBesideSidebar(sidebarContainer, drag.currentX)) {
+    drag.reorderIntent = null
+    drag.latestStatusDropTarget = null
+    clearInsertionLine(args)
+    return
+  }
   const preferredStatusTarget = ctx.getEligibleLineageDropTarget(
     sidebarContainer
       ? getPointerDropStatusTarget({
