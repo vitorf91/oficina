@@ -24,6 +24,9 @@ test('a folder workspace card can be dropped into a pane and the pair splits', a
       name: 'notes-folder',
       folderPath: dir
     })
+    if (!workspace) {
+      throw new Error('Expected the folder workspace to be created')
+    }
     state.setActiveWorktree(primary.id)
     return { primaryId: primary.id, folderKey: `folder:${workspace.id}` }
   }, folderPath)

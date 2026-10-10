@@ -222,3 +222,132 @@ test('two workspaces without any tab still split into empty panes that can start
     orcaPage.locator('.xterm:visible').locator('xpath=ancestor::*[@data-workspace-surface-id]')
   ).toHaveCount(await orcaPage.locator('.xterm:visible').count())
 })
+
+test('a group with a member that is not a workspace shows the live ones and keeps the stored layout', async ({
+  orcaPage
+}) => {
+  test.setTimeout(180_000)
+  const [firstId, secondId] = await orcaPage.evaluate(() => {
+    const state = window.__store!.getState()
+    const worktrees = Object.values(state.worktreesByRepo).find((items) => items.length >= 2)!
+    return worktrees.slice(0, 2).map((worktree) => worktree.id)
+  })
+  const ghostId = `${firstId.split('::')[0]}::/tmp/oficina-never-existed`
+  const row = (id: string) => orcaPage.locator(`[role="option"][data-worktree-id="${id}"]`)
+  const surface = (id: string) => orcaPage.locator(`[data-workspace-surface-id="${id}"]`)
+  const split = orcaPage.locator('[data-workspace-split="true"]')
+  const storedRatios = () =>
+    orcaPage.evaluate(() => {
+      const layout = window.__store!.getState().workspaceSplitGroups[0]?.layout
+      return layout?.type === 'split' && layout.first.type === 'split'
+        ? [layout.ratio, layout.first.ratio]
+        : null
+    })
+
+  // Stored as (first over second) next to a workspace that no longer exists.
+  await orcaPage.evaluate(
+    ([first, second, ghost]) => {
+      const state = window.__store!.getState()
+      state.placeWorkspaceAtEdge(ghost, first, 'right')
+      state.placeWorkspaceAtEdge(second, first, 'bottom')
+      state.setActiveWorktree(first)
+    },
+    [firstId, secondId, ghostId]
+  )
+  await expect(split).toBeVisible()
+  await expect(surface(firstId)).toBeVisible()
+  await expect(surface(secondId)).toBeVisible()
+  await expect(surface(ghostId)).toHaveCount(0)
+  await expect(orcaPage.locator('[data-workspace-pane-header]:visible')).toHaveCount(2)
+  // The two live panes are stacked and fill the width the missing one would have shared.
+  const firstBox = (await surface(firstId).boundingBox())!
+  const secondBox = (await surface(secondId).boundingBox())!
+  expect(secondBox.y).toBeGreaterThan(firstBox.y)
+  expect(Math.abs(firstBox.width - secondBox.width)).toBeLessThan(2)
+
+  // The member menu still offers the group's own entry.
+  await row(secondId).click({ button: 'right' })
+  await expect(orcaPage.getByRole('menuitem', { name: 'Unsplit workspace' })).toBeVisible()
+  await expect(orcaPage.getByRole('menuitem', { name: 'Split with workspace' })).toHaveCount(0)
+  await orcaPage.keyboard.press('Escape')
+
+  // A resize lands on the divider that was dragged, not on the hidden one beside it.
+  const handle = orcaPage.locator('[data-workspace-split-handle="vertical"]')
+  const handleBox = (await handle.boundingBox())!
+  await orcaPage.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2)
+  await orcaPage.mouse.down()
+  await orcaPage.mouse.move(handleBox.x + 40, handleBox.y - 90, { steps: 6 })
+  await orcaPage.mouse.up()
+  await expect.poll(async () => (await storedRatios())?.[1]).not.toBe(0.5)
+  expect((await storedRatios())![0]).toBe(0.5)
+
+  // A workspace that is only slow to load comes back to its place instead of being lost.
+  const removed = await orcaPage.evaluate((id) => {
+    const state = window.__store!.getState()
+    const repoId = Object.keys(state.worktreesByRepo).find((key) =>
+      state.worktreesByRepo[key].some((worktree) => worktree.id === id)
+    )!
+    const worktree = state.worktreesByRepo[repoId].find((item) => item.id === id)!
+    window.__store!.setState({
+      worktreesByRepo: {
+        ...state.worktreesByRepo,
+        [repoId]: state.worktreesByRepo[repoId].filter((item) => item.id !== id)
+      }
+    })
+    return { repoId, worktree }
+  }, secondId)
+  await expect(split).toHaveCount(0)
+  await expect(surface(firstId)).toBeVisible()
+  await expect(orcaPage.locator('[data-workspace-pane-header]:visible')).toHaveCount(0)
+  await orcaPage.evaluate(({ repoId, worktree }) => {
+    const state = window.__store!.getState()
+    window.__store!.setState({
+      worktreesByRepo: {
+        ...state.worktreesByRepo,
+        [repoId]: [...state.worktreesByRepo[repoId], worktree]
+      }
+    })
+  }, removed)
+  await expect(split).toBeVisible()
+  await expect(surface(secondId)).toBeVisible()
+  await expect(orcaPage.locator('[data-workspace-pane-header]:visible')).toHaveCount(2)
+})
+
+test('a seventeenth workspace is refused with a message and nothing is split', async ({
+  orcaPage
+}) => {
+  test.setTimeout(120_000)
+  const [firstId, secondId] = await orcaPage.evaluate(() => {
+    const state = window.__store!.getState()
+    const worktrees = Object.values(state.worktreesByRepo).find((items) => items.length >= 2)!
+    return worktrees.slice(0, 2).map((worktree) => worktree.id)
+  })
+  const row = (id: string) => orcaPage.locator(`[role="option"][data-worktree-id="${id}"]`)
+  const surface = (id: string) => orcaPage.locator(`[data-workspace-surface-id="${id}"]`)
+  // The first workspace already belongs to a group of sixteen: itself and fifteen that are
+  // stored but not shown, which still hold their places.
+  await orcaPage.evaluate(
+    ([first]) => {
+      const state = window.__store!.getState()
+      for (let index = 0; index < 15; index += 1) {
+        state.placeWorkspaceAtEdge(
+          `${first.split('::')[0]}::/tmp/oficina-gone-${index}`,
+          first,
+          'right'
+        )
+      }
+      state.setActiveWorktree(first)
+    },
+    [firstId]
+  )
+  await expect(surface(firstId)).toBeVisible()
+  const bounds = (await surface(firstId).boundingBox())!
+  await row(secondId).dragTo(surface(firstId), {
+    sourcePosition: { x: 80, y: 16 },
+    targetPosition: { x: 8, y: Math.floor(bounds.height / 2) }
+  })
+  await expect(orcaPage.getByText('A split can contain up to 16 workspaces')).toBeVisible()
+  await expect(orcaPage.locator('[data-workspace-split="true"]')).toHaveCount(0)
+  await expect(surface(secondId)).not.toBeVisible()
+  await expect(row(firstId)).toHaveAttribute('aria-current', 'page')
+})
