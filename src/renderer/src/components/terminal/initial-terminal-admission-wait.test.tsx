@@ -93,7 +93,8 @@ function Watcher(): null {
     terminalParkingEnabled: false,
     terminalProviderSnapshotCapabilityRevision: 0,
     terminalSshParkingEnabled: false,
-    terminalTitleSnapshotAuthorityEnabled: false
+    terminalTitleSnapshotAuthorityEnabled: false,
+    visibleWorkspaceIds: ['wt-1']
   })
   return null
 }
