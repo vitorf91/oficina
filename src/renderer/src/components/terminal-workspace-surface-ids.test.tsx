@@ -131,7 +131,6 @@ describe('workspace surface ids', () => {
       pairedRuntimeParkingEnvironmentIds: new Set(),
       pendingStartupByTabId: {},
       renderedActiveWorktreeId: 'repo::/worktree-0',
-      visibleWorkspaceIds: ['repo::/worktree-0'],
       tabsByWorktree: {},
       terminalParkingEnabled: true,
       terminalSshParkingEnabled: true,
@@ -142,6 +141,7 @@ describe('workspace surface ids', () => {
       workspaceSurfaceIds: ids,
       workspaceSurfaceIdSet: new Set(ids)
     } as unknown as TerminalParkingFoundation
+    controller.visibleWorkspaceIds = ['repo::/worktree-0']
 
     const pass = collectTerminalParkingPassCandidates(controller)
 
