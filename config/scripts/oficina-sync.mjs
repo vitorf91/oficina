@@ -38,6 +38,8 @@ function capture(command, args) {
   return execFileSync(command, args, {
     cwd: repoRoot,
     encoding: 'utf8',
+    // Why: `git ls-files` on this repo is several MB.
+    maxBuffer: 64 * 1024 * 1024,
     stdio: ['ignore', 'pipe', 'inherit']
   }).trimEnd()
 }
