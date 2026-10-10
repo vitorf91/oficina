@@ -49,6 +49,49 @@ function pnpm(args, env = {}) {
   run('pnpm', args, { env: { ...process.env, ...env } })
 }
 
+// Why refuse a dirty tree: the bundle stamps HEAD as its commit, so uncommitted or untracked files would ship under a commit that does not contain them.
+function assertCleanTree() {
+  const dirty = execFileSync('git', ['status', '--porcelain', '--untracked-files=all'], {
+    cwd: repoRoot,
+    encoding: 'utf8'
+  }).trimEnd()
+  if (dirty) {
+    throw new Error(`Refusing to build from a dirty tree; commit or remove:\n${dirty}`)
+  }
+}
+
+// Top-level names that mean local test output or sources leaked into app.asar.
+const FORBIDDEN_ASAR_ENTRIES = ['test-results', 'playwright-report', 'tests']
+
+// Why parse the header by hand: the asar header is a JSON index behind two Chromium pickles, so no extra dependency.
+function asarTopLevelEntries(asarPath) {
+  const fd = openSync(asarPath, 'r')
+  try {
+    const prefix = Buffer.alloc(16)
+    readSync(fd, prefix, 0, 16, 0)
+    const json = Buffer.alloc(prefix.readUInt32LE(12))
+    readSync(fd, json, 0, json.length, 16)
+    return Object.keys(JSON.parse(json.toString('utf8')).files)
+  } finally {
+    closeSync(fd)
+  }
+}
+
+function verifyBundle(appPath, commit) {
+  const resources = join(appPath, 'Contents', 'Resources')
+  const leaked = asarTopLevelEntries(join(resources, 'app.asar')).filter((name) =>
+    FORBIDDEN_ASAR_ENTRIES.includes(name)
+  )
+  if (leaked.length > 0) {
+    throw new Error(`app.asar contains local test output or sources: ${leaked.join(', ')}`)
+  }
+  const stamped = JSON.parse(readFileSync(join(resources, 'orca-local-build.json'), 'utf8'))
+  if (stamped.commit !== commit) {
+    throw new Error(`Build stamped commit ${stamped.commit}, but HEAD is ${commit}.`)
+  }
+  console.log(`[oficina-local] bundle checks passed: app.asar clean, build id ${stamped.buildId}`)
+}
+
 function timed(label, fn, timings) {
   const startedAt = Date.now()
   fn()
@@ -59,6 +102,12 @@ function build() {
   if (process.platform !== 'darwin' || process.arch !== 'arm64') {
     throw new Error('oficina-local build targets an arm64 Mac')
   }
+  assertCleanTree()
+  // Why 12 chars: the same short form the base builder config stamps when no commit is given.
+  const commit = execFileSync('git', ['rev-parse', '--short=12', 'HEAD'], {
+    cwd: repoRoot,
+    encoding: 'utf8'
+  }).trim()
   const timings = []
   const overallStart = Date.now()
   timed(
@@ -95,10 +144,18 @@ function build() {
           '--publish',
           'never'
         ],
-        { env: { ...process.env, CSC_IDENTITY_AUTO_DISCOVERY: 'false' } }
+        {
+          env: {
+            ...process.env,
+            CSC_IDENTITY_AUTO_DISCOVERY: 'false',
+            // Why explicit: the stamp must be this clean HEAD, never a value inherited from the caller's environment.
+            ORCA_BUILD_COMMIT: commit
+          }
+        }
       ),
     timings
   )
+  timed('bundle checks', () => verifyBundle(defaultAppPath, commit), timings)
   timed('sign with local identity', () => sign(defaultAppPath), timings)
   const total = Math.round((Date.now() - overallStart) / 100) / 10
   console.log('\n[oficina-local] build timings')
