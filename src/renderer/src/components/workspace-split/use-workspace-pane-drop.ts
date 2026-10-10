@@ -17,6 +17,7 @@ import {
 import { workspaceDropTarget } from './workspace-drop-target'
 import {
   readWorkspacePanePointerDetail,
+  WORKSPACE_PANE_DROP_TARGET_QUERY,
   WORKSPACE_PANE_POINTER_CLEAR,
   WORKSPACE_PANE_POINTER_DROP,
   WORKSPACE_PANE_POINTER_MOVE
@@ -150,12 +151,19 @@ export function useWorkspacePaneDrop(
       }
     }
 
+    const onDropTargetQuery = (event: Event): void => {
+      if (ids.size > 0) {
+        event.preventDefault()
+      }
+    }
+
     document.addEventListener('dragover', onDragOver, true)
     document.addEventListener('drop', onDrop, true)
     document.addEventListener('dragend', clear, true)
     document.addEventListener(WORKSPACE_PANE_POINTER_MOVE, onPointerMove)
     document.addEventListener(WORKSPACE_PANE_POINTER_DROP, onPointerDrop)
     document.addEventListener(WORKSPACE_PANE_POINTER_CLEAR, clear)
+    document.addEventListener(WORKSPACE_PANE_DROP_TARGET_QUERY, onDropTargetQuery)
     return () => {
       document.removeEventListener('dragover', onDragOver, true)
       document.removeEventListener('drop', onDrop, true)
@@ -163,6 +171,7 @@ export function useWorkspacePaneDrop(
       document.removeEventListener(WORKSPACE_PANE_POINTER_MOVE, onPointerMove)
       document.removeEventListener(WORKSPACE_PANE_POINTER_DROP, onPointerDrop)
       document.removeEventListener(WORKSPACE_PANE_POINTER_CLEAR, clear)
+      document.removeEventListener(WORKSPACE_PANE_DROP_TARGET_QUERY, onDropTargetQuery)
     }
   }, [rootRef, visibleIdsKey, rendersRoot])
   return hover

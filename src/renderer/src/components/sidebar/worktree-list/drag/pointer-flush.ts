@@ -2,10 +2,12 @@ import type React from 'react'
 import type { WorkspaceStatus } from '../../../../../../shared/worktree/types'
 import {
   clearWorkspaceKanbanSidebarDropTargetVisual,
+  hasWorkspaceKanbanSidebarDropBoard,
   isWorkspaceKanbanSidebarDropPointInBoard,
   updateWorkspaceKanbanSidebarDropTargetVisual
 } from '../../workspace-kanban-sidebar-drop'
 import { updateSidebarDragPreviewPosition } from '../../worktree-sidebar-pointer-drag-dom'
+import { hasWorkspacePaneDropTarget } from '../../../workspace-split/workspace-pane-pointer-drag'
 import {
   getPointerDropStatusTarget,
   isPointBesideSidebar,
@@ -101,8 +103,17 @@ export function flushWorktreePointerDragFrame(args: WorktreePointerDragFrameArgs
     ctx.clearWorktreeDrag()
     return
   }
-  // The board stays available through its explicit toolbar button. Opening it for every card
-  // drag would cover the workspace panes, which are drop targets for splitting.
+  // Why: show the board preview as soon as a card drag begins so the drop target is visible up front, not only at the sidebar edge.
+  // Not while a workspace pane is on screen: the preview would cover the panes that take the drop.
+  if (
+    !drag.workspaceBoardDragPreviewRequested &&
+    !args.workspaceBoardOpen &&
+    !hasWorkspaceKanbanSidebarDropBoard() &&
+    !hasWorkspacePaneDropTarget()
+  ) {
+    drag.workspaceBoardDragPreviewRequested = true
+    args.onWorkspaceBoardDragPreviewStart()
+  }
   const boardTarget = updateWorkspaceKanbanSidebarDropTargetVisual({
     x: drag.currentX,
     y: drag.currentY,

@@ -4,6 +4,7 @@
 export const WORKSPACE_PANE_POINTER_MOVE = 'orca:workspace-pane-pointer-move'
 export const WORKSPACE_PANE_POINTER_DROP = 'orca:workspace-pane-pointer-drop'
 export const WORKSPACE_PANE_POINTER_CLEAR = 'orca:workspace-pane-pointer-clear'
+export const WORKSPACE_PANE_DROP_TARGET_QUERY = 'orca:workspace-pane-drop-target-query'
 
 export type WorkspacePanePointerDetail = {
   sourceId: string
@@ -44,4 +45,11 @@ export function dispatchWorkspacePanePointerDrop(detail: WorkspacePanePointerDet
 
 export function dispatchWorkspacePanePointerClear(): void {
   document.dispatchEvent(new Event(WORKSPACE_PANE_POINTER_CLEAR))
+}
+
+/** True while a visible workspace pane is on screen to take a dragged card as a split. */
+export function hasWorkspacePaneDropTarget(): boolean {
+  const query = new CustomEvent(WORKSPACE_PANE_DROP_TARGET_QUERY, { cancelable: true })
+  document.dispatchEvent(query)
+  return query.defaultPrevented
 }
