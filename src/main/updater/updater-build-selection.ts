@@ -1,5 +1,6 @@
 import { app } from 'electron'
 import { is } from '@electron-toolkit/utils'
+import { OFICINA_IDENTITY } from '../../shared/oficina-identity'
 import {
   DEV_CHANNEL_PLATFORM_LABEL,
   getVersionChannel,
@@ -90,7 +91,7 @@ export abstract class UpdaterBuildSelection extends UpdaterMenuChecks {
 
   /** Pins the updater at one exact release tag and checks it, so a dev can move to any published build on any channel — including an older one. */
   protected async checkForPinnedBuild(channel: ReleaseChannel, tag: string): Promise<void> {
-    if (!app.isPackaged || is.dev) {
+    if (!app.isPackaged || is.dev || !OFICINA_IDENTITY.autoUpdateEnabled) {
       this.sendStatus({ state: 'not-available', userInitiated: true })
       return
     }

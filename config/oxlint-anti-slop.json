@@ -65,9 +65,14 @@
         "anti-slop/no-module-mocking": "off"
       }
     },
-    // Test-only builtin adapters publish Node-compatible behavior and instrument OS metrics.
+    // Test-only builtin adapters publish Node-compatible behavior and instrument OS metrics; the identity
+    // setup file swaps the fork's identity module for upstream values so inherited suites stay unedited.
     {
-      "files": ["**/vitest-bun-node-builtins.ts", "**/hang-watchdog-process-metrics.test.mjs"],
+      "files": [
+        "**/vitest-bun-node-builtins.ts",
+        "**/vitest-upstream-identity-setup.ts",
+        "**/hang-watchdog-process-metrics.test.mjs"
+      ],
       "rules": {
         "anti-slop/no-module-mocking": "off"
       }

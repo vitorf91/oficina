@@ -9,6 +9,7 @@ import {
 } from '../../shared/secure-file'
 import type { SecretAtRestProtection } from '../../shared/secret-at-rest-protection'
 import { ApiKeyFileUnreadableError } from './api-key-file-unreadable-error'
+import { OFICINA_IDENTITY } from '../../shared/oficina-identity'
 
 type EncryptedApiKeyFileStore = {
   protection: () => SecretAtRestProtection | null
@@ -38,7 +39,7 @@ export function createEncryptedApiKeyFileStore({
   }
 
   function getOrcaDir(): string {
-    return join(homedir(), '.orca')
+    return join(homedir(), OFICINA_IDENTITY.homeDirName)
   }
 
   function getApiKeyPath(): string {

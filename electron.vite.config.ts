@@ -6,6 +6,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { createBootstrapFatalExitBanner } from './config/build-plugins/bootstrap-fatal-exit-banner'
 import { createPdfjsViewerAssetsPlugin } from './config/build-plugins/pdfjs-viewer-assets'
+import { createProductTitlePlugin } from './config/build-plugins/product-title'
 import {
   CLI_MAIN_ENTRY_NAMES,
   createPlainNodeEntryGuardPlugin
@@ -322,7 +323,7 @@ export const electronViteConfig: UserConfig = {
         '@': resolve('src/renderer/src')
       }
     },
-    plugins: [react(), tailwindcss(), createPdfjsViewerAssetsPlugin()],
+    plugins: [react(), tailwindcss(), createPdfjsViewerAssetsPlugin(), createProductTitlePlugin()],
     worker: {
       format: 'es'
     },

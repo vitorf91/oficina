@@ -52,6 +52,7 @@ import { reconcileManagedWslCliRegistrations } from '../cli/wsl-cli-registration
 import { createWslCliReconciliationStartupBarrier } from './wsl-cli-reconciliation-startup-barrier'
 import { agentHookServer } from '../agent-hooks/server'
 import { isAgentStatusHooksEnabled } from '../agent-hooks/managed-agent-hook-controls'
+import { isAgentStatusReceiverEnabled } from '../../shared/agent-status-hooks-setting'
 import { reportProfileStateWriteFailure } from './profile-state-write-failure'
 
 export async function initializeReadyFoundation(): Promise<void> {
@@ -250,7 +251,7 @@ export async function initializeReadyFoundation(): Promise<void> {
       syncMacMenuBarIcon(settings.showMenuBarIcon !== false)
     }
     if ('agentStatusHooksEnabled' in updates) {
-      agentHookServer.setStatusHooksEnabled(isAgentStatusHooksEnabled(settings))
+      agentHookServer.setStatusHooksEnabled(isAgentStatusReceiverEnabled(settings))
       // Why both directions: the ensure gate only blocks NEW relays, so off must stop the running
       // guest process and timers, and on must restart them — otherwise open WSL panes report no
       // status until their next spawn.

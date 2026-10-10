@@ -4,6 +4,7 @@ import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { getVersionManagerBinPaths } from '../codex-cli/command'
 import { getMainE2EConfig } from '../e2e-config'
+import { OFICINA_IDENTITY } from '../../shared/oficina-identity'
 import { DISABLED_CHROMIUM_FEATURES } from './disabled-chromium-features'
 import { readHttp1CompatibilityMarker } from './http1-compatibility-marker'
 import {
@@ -218,7 +219,7 @@ export function configureDevUserDataPath(isDev: boolean): void {
     return
   }
   // Why: without a dev-only path, pnpm dev overwrites the packaged app's runtime pointer under userData and breaks the orca CLI.
-  app.setPath('userData', join(app.getPath('appData'), 'orca-dev'))
+  app.setPath('userData', join(app.getPath('appData'), OFICINA_IDENTITY.devUserDataDirName))
 }
 
 function areSameE2EHomePath(left: string, right: string): boolean {
@@ -236,8 +237,8 @@ export function configureOrcaUserDataPathEnv(): void {
 
 export function shouldInstallManagedHooks(isDev: boolean): boolean {
   void isDev
-  // Why: managed hooks now target Orca-owned Codex homes, not ~/.codex, so keep install on for all agents until each gets its own seam.
-  return true
+  // Why: the fork keeps managed hooks off (oficina-identity.ts); upstream installs them for all agents.
+  return OFICINA_IDENTITY.agentStatusHooksEnabled
 }
 
 export function installDevParentDisconnectQuit(isDev: boolean): void {

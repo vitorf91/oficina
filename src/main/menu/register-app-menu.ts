@@ -7,6 +7,7 @@ import {
 } from '../../shared/keybindings'
 import type { UpdateCheckOptions } from '../../shared/update-status-types'
 import { translateMain } from '../i18n/main-i18n'
+import { withProductName } from '../../shared/oficina-product-name'
 import { createAppMenuSelectionItem } from './app-menu-selection-item'
 import { createAppWindowMenu } from './app-menu-window'
 
@@ -128,12 +129,12 @@ function buildAndApplyMenu(options: RegisterAppMenuOptions): void {
   }
 
   const featureTourItem: Electron.MenuItemConstructorOptions = {
-    label: translateMain('menu.exploreOrca', 'Explore Orca'),
+    label: withProductName(translateMain('menu.exploreOrca', 'Explore Orca')),
     click: (_menuItem, window) => onOpenFeatureTour(window)
   }
 
   const setupGuideItem: Electron.MenuItemConstructorOptions = {
-    label: translateMain('menu.gettingStarted', 'Getting Started with Orca'),
+    label: withProductName(translateMain('menu.gettingStarted', 'Getting Started with Orca')),
     click: (_menuItem, window) => onOpenSetupGuide(window)
   }
 

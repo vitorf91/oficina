@@ -1,6 +1,7 @@
 import { app, powerMonitor } from 'electron'
 import type { BrowserWindow } from 'electron'
 import { is } from '@electron-toolkit/utils'
+import { OFICINA_IDENTITY } from '../../shared/oficina-identity'
 import type { ReleaseBuild, ReleaseChannel } from '../../shared/release-channel'
 import type { ReleaseBuildListOptions } from '../updater-release-build-cache'
 import type {
@@ -138,7 +139,8 @@ export class UpdaterSetup extends UpdaterDownloadInstall {
     if (!app.isPackaged && !is.dev) {
       return
     }
-    if (is.dev) {
+    // Why: the fork has no update feed; returning here keeps electron-updater from even loading.
+    if (is.dev || !OFICINA_IDENTITY.autoUpdateEnabled) {
       return
     }
 

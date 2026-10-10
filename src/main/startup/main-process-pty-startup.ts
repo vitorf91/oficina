@@ -17,10 +17,8 @@ import {
 } from '../codex/codex-pane-account-registry'
 import { reconcileRetainedCodexHookHomes } from '../codex/retained-codex-hook-state'
 import { codexHookService } from '../codex/hook-service'
-import {
-  isAgentStatusHooksEnabled,
-  isAgentStatusHooksEnabledForAgent
-} from '../agent-hooks/managed-agent-hook-controls'
+import { isAgentStatusHooksEnabledForAgent } from '../agent-hooks/managed-agent-hook-controls'
+import { isAgentStatusReceiverEnabled } from '../../shared/agent-status-hooks-setting'
 import { agentHookServer } from '../agent-hooks/server'
 import { createLocalTmuxManagedPtyResolver } from '../agent-hooks/local-tmux-managed-pty'
 import {
@@ -179,7 +177,7 @@ export function startTerminalRuntimeStartupServices(): WindowsDesktopStartupServ
         track('agent_hook_transport_blocked', { count: report.count })
       })
       await agentHookServer.start({
-        statusHooksEnabled: isAgentStatusHooksEnabled(settings),
+        statusHooksEnabled: isAgentStatusReceiverEnabled(settings),
         env: app.isPackaged ? 'production' : 'development',
         // Why: hooks source this endpoint file at invocation time so old PTY env reaches the current process after restart; dev namespaces it (worktrees share `orca-dev`).
         userDataPath: app.getPath('userData'),

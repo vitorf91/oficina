@@ -23,9 +23,10 @@ import {
   writeJsonDocument,
   type JsonObject
 } from './keybinding-file-parser'
+import { OFICINA_IDENTITY } from '../../shared/oficina-identity'
 
 export function getUserKeybindingsPath(homePath: string): string {
-  return join(homePath, '.orca', 'keybindings.json')
+  return join(homePath, OFICINA_IDENTITY.homeDirName, 'keybindings.json')
 }
 
 export function readKeybindingFile(

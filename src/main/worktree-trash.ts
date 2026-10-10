@@ -5,6 +5,7 @@
 import { lstat, readdir, rmdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { removeHostTree } from './host-tree-removal'
+import { OFICINA_IDENTITY } from '../shared/oficina-identity'
 import { isFolderRepo } from '../shared/repo-kind'
 import { computeWorkspaceRoot, getWorktreePathSettings } from './ipc/worktree-logic'
 import type { GlobalSettings } from '../shared/global-settings-types'
@@ -23,6 +24,9 @@ const TRASH_SWEEP_MAX_CONTAINERS = 200
 export async function sweepStaleWorktreeTrash(
   workspaceRoots: readonly string[]
 ): Promise<{ removed: number }> {
+  if (!OFICINA_IDENTITY.worktreeTrashSweepEnabled) {
+    return { removed: 0 }
+  }
   let removed = 0
   for (const trashRoot of await collectExistingTrashRoots(workspaceRoots)) {
     let entries: string[]
