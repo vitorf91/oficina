@@ -42,7 +42,10 @@ const state = {
   keybindings: {},
   settings: { activeRuntimeEnvironmentId: null, openInApplications: [] },
   openSettingsPage: vi.fn(),
-  openSettingsTarget: vi.fn()
+  openSettingsTarget: vi.fn(),
+  // Read by the workspace split entries of the menu.
+  folderWorkspaces: [],
+  workspaceSplitGroups: []
 }
 
 vi.mock('@/store', () => ({

@@ -43,6 +43,7 @@ type TerminalWatcherController = Pick<
   | 'pendingStartupByTabId'
   | 'reconcileWorktreeTabModel'
   | 'renderedActiveWorktreeId'
+  | 'visibleWorkspaceIds'
   | 'startupTerminalTabHold'
   | 'tabsByWorktree'
   | 'terminalParkingEnabled'
@@ -84,7 +85,8 @@ export function useTerminalWatcherEffects(controller: TerminalWatcherController)
     terminalStartupRestorationReady,
     terminalTitleSnapshotAuthorityEnabled,
     workspaceSessionReady,
-    workspaceSurfaceIds
+    workspaceSurfaceIds,
+    visibleWorkspaceIds
   } = controller
 
   useEffect(() => {
@@ -104,7 +106,7 @@ export function useTerminalWatcherEffects(controller: TerminalWatcherController)
       if (!anyMountedWorktreeHasLayout && mountedWorktreeIdsRef.current.has(workspaceId)) {
         const mountedParkedTabIds = new Set<string>()
         parkedTabIds = mountedParkedTabIds
-        const isVisible = activeView === 'terminal' && workspaceId === renderedActiveWorktreeId
+        const isVisible = activeView === 'terminal' && visibleWorkspaceIds.includes(workspaceId)
         const shouldMeasureHiddenWorktree =
           !isVisible && measurableBackgroundWorktreeIdsRef.current.has(workspaceId)
         const parked =
@@ -180,6 +182,7 @@ export function useTerminalWatcherEffects(controller: TerminalWatcherController)
     pairedRuntimeParkingEnvironmentIds,
     pendingStartupByTabId,
     renderedActiveWorktreeId,
+    visibleWorkspaceIds,
     startupTerminalTabHold,
     tabsByWorktree,
     terminalParkingEnabled,

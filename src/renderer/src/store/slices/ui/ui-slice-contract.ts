@@ -7,6 +7,7 @@ import type {
   UISlicePreferences,
   UISliceSurfaces
 } from './ui-slice-contract-preferences'
+import type { UISliceWorkspaceSplit } from './ui-slice-contract-workspace-split'
 
 export type {
   AgentSendPopoverTargetMode,
@@ -25,7 +26,8 @@ export type {
   UISliceSurfaces
 } from './ui-slice-contract-preferences'
 
-export type UISlice = UISliceCore &
+export type UISlice = UISliceWorkspaceSplit &
+  UISliceCore &
   UISliceContextual &
   UISlicePreferences &
   UISliceSurfaces &

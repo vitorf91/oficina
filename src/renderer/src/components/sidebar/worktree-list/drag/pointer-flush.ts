@@ -7,7 +7,12 @@ import {
   updateWorkspaceKanbanSidebarDropTargetVisual
 } from '../../workspace-kanban-sidebar-drop'
 import { updateSidebarDragPreviewPosition } from '../../worktree-sidebar-pointer-drag-dom'
-import { getPointerDropStatusTarget, shouldPreferSidebarStatusDropTarget } from './status-target'
+import { hasWorkspacePaneDropTarget } from '../../../workspace-split/workspace-pane-pointer-drag'
+import {
+  getPointerDropStatusTarget,
+  isPointBesideSidebar,
+  shouldPreferSidebarStatusDropTarget
+} from './status-target'
 import type { WorktreeDropCommitContext } from './drop-commit-context'
 import {
   applyWorktreeDropPreview,
@@ -99,10 +104,12 @@ export function flushWorktreePointerDragFrame(args: WorktreePointerDragFrameArgs
     return
   }
   // Why: show the board preview as soon as a card drag begins so the drop target is visible up front, not only at the sidebar edge.
+  // Not while a workspace pane is on screen: the preview would cover the panes that take the drop.
   if (
     !drag.workspaceBoardDragPreviewRequested &&
     !args.workspaceBoardOpen &&
-    !hasWorkspaceKanbanSidebarDropBoard()
+    !hasWorkspaceKanbanSidebarDropBoard() &&
+    !hasWorkspacePaneDropTarget()
   ) {
     drag.workspaceBoardDragPreviewRequested = true
     args.onWorkspaceBoardDragPreviewStart()
@@ -132,6 +139,14 @@ export function flushWorktreePointerDragFrame(args: WorktreePointerDragFrameArgs
   }
 
   const sidebarContainer = ctx.scrollRef.current
+  // Why: reorder slots are resolved from Y alone, so a card carried over a workspace pane
+  // would otherwise preview, and on release commit, a sidebar reorder nobody aimed at.
+  if (isPointBesideSidebar(sidebarContainer, drag.currentX)) {
+    drag.reorderIntent = null
+    drag.latestStatusDropTarget = null
+    clearInsertionLine(args)
+    return
+  }
   const preferredStatusTarget = ctx.getEligibleLineageDropTarget(
     sidebarContainer
       ? getPointerDropStatusTarget({

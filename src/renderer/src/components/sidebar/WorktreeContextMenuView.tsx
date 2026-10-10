@@ -36,6 +36,7 @@ import { useOptionalShortcutLabel } from '@/hooks/useShortcutLabel'
 import type { WorktreeContextMenuModel } from './use-worktree-context-menu-model'
 import { WorktreeStatusMenuItems } from './WorktreeStatusMenuItems'
 import { WorktreeContextMenuOverlays } from './WorktreeContextMenuOverlays'
+import { WorkspaceSplitMenuItems } from './WorkspaceSplitMenuItems'
 import {
   WORKTREE_CONTEXT_MENU_SCOPE_ATTR,
   getWorktreeParentPickerLabel,
@@ -173,6 +174,7 @@ export default function WorktreeContextMenuView({ model }: { model: WorktreeCont
           <DropdownMenuSeparator />
           {!isMultiContext && (
             <>
+              <WorkspaceSplitMenuItems worktreeId={worktree.id} disabled={isDeleting} />
               <WorktreeOpenInSubMenu
                 worktreePath={worktree.path}
                 connectionId={repo?.connectionId ?? null}

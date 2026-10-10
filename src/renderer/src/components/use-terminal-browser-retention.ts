@@ -20,6 +20,7 @@ export function useTerminalBrowserRetention(controller: TerminalParkingFoundatio
     mountedWorktreeIdsRef,
     renderedActiveWorktreeId,
     setBrowserGuestRetentionRevision,
+    visibleWorkspaceIds,
     workspaceSurfaceIds,
     workspaceSurfaceIdSet
   } = controller
@@ -60,7 +61,10 @@ export function useTerminalBrowserRetention(controller: TerminalParkingFoundatio
     const evictedWorktreeIds = selectBrowserGuestEvictionWorktreeIds({
       orderedWorktreeIds,
       activeWorktreeId: renderedActiveWorktreeId,
-      isRetained: (worktreeId) => mountedWorktreeIdsRef.current.has(worktreeId),
+      // Why: every pane of a visible workspace split is on screen, so none of them is a hidden
+      // worktree whose guests the budget may destroy.
+      isRetained: (worktreeId) =>
+        mountedWorktreeIdsRef.current.has(worktreeId) && !visibleWorkspaceIds.includes(worktreeId),
       holdsLiveGuests: (worktreeId) =>
         worktreeHoldsLiveBrowserGuests(
           state.browserTabsByWorktree[worktreeId] ?? [],
@@ -82,6 +86,7 @@ export function useTerminalBrowserRetention(controller: TerminalParkingFoundatio
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- controller refs preserve their original stable identities.
   }, [
     renderedActiveWorktreeId,
+    visibleWorkspaceIds,
     workspaceSurfaceIds,
     browserGuestRetentionBudgetEnabled,
     browserGuestRetentionRevision

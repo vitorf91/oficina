@@ -1,4 +1,11 @@
 {
+  "workspaceSplit": {
+    "newTerminal": "Nouveau terminal",
+    "paneLimit": "Une scission peut contenir jusqu'à {{count}} espaces de travail",
+    "removePane": "Retirer l'espace de travail de la scission",
+    "splitWith": "Scinder avec l'espace de travail",
+    "unsplit": "Annuler la scission de l'espace de travail"
+  },
   "app": {
     "recoverableError": {
       "rootTitle": "Orca a rencontré une erreur de rendu.",

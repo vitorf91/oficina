@@ -10,6 +10,7 @@ import { useReusedArrayIdentity } from './sidebar/worktree-list/listing/use-reus
 import { selectPairedRuntimeParkingEnvironmentIds } from './terminal-pane/terminal-hidden-view-parking'
 import { createTerminalWorktreeTopologyProjection } from './terminal-pane/terminal-hidden-worktree-retention'
 import { isMainTerminalSideEffectAuthorityForPty } from './terminal-pane/terminal-side-effect-facts-handler'
+import { useVisibleWorkspaceSplit } from './workspace-split/use-visible-workspace-split'
 
 export function useTerminalWorkspaceFoundation() {
   const terminalTopologyProjectionRef = useRef<WorktreeTabBucketProjection<
@@ -63,6 +64,10 @@ export function useTerminalWorkspaceFoundation() {
     [workspaceSurfaceIds]
   )
   const activeView = useAppStore((state) => state.activeView)
+  const { visibleWorkspaceSplitGroup, visibleWorkspaceIds } = useVisibleWorkspaceSplit(
+    renderedActiveWorktreeId,
+    workspaceSurfaceIdSet
+  )
   // Why: terminal titles are leaf chrome. The root host only subscribes to
   // mount/parking semantics; a real transition publishes fresh tab objects,
   // while LiveTerminalTabBar reads title-only updates from the active bucket.
@@ -110,6 +115,8 @@ export function useTerminalWorkspaceFoundation() {
     renderedActiveWorktreeId,
     activeWorktreeDeferralHostId,
     activeView,
+    visibleWorkspaceSplitGroup,
+    visibleWorkspaceIds,
     tabsByWorktree,
     pendingStartupByTabId,
     terminalParkingEnabled,

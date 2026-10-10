@@ -1,4 +1,11 @@
 {
+  "workspaceSplit": {
+    "newTerminal": "新規ターミナル",
+    "paneLimit": "1 つの分割には最大 {{count}} 個のワークスペースを含められます",
+    "removePane": "ワークスペースを分割から外す",
+    "splitWith": "ワークスペースと分割",
+    "unsplit": "ワークスペースの分割を解除"
+  },
   "app": {
     "recoverableError": {
       "rootTitle": "Orca でレンダラーエラーが発生しました。",

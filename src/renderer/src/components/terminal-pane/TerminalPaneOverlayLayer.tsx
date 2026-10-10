@@ -14,6 +14,7 @@ import { TerminalOverlaySlot } from './TerminalOverlaySlot'
 import { captureWorkspaceEmptiedReaction } from '../tab-group/workspace-emptied-reaction'
 import { TerminalRestoringPlaceholder } from './TerminalRestoringPlaceholder'
 import { useTerminalTabColdParking } from './use-terminal-tab-cold-parking'
+import { useWorkspacePane } from '../workspace-split/workspace-pane-context'
 
 type TerminalOverlayAssignment = {
   unifiedTabId: string
@@ -63,6 +64,8 @@ const TerminalPaneOverlayLayer = memo(function TerminalPaneOverlayLayer({
     }))
   )
   const focusGroup = useAppStore((state) => state.focusGroup)
+  // Only the focused pane of a workspace split may hold the active terminal.
+  const workspacePaneFocused = useWorkspacePane().focused
   const consumeSuppressedPtyExit = useAppStore((state) => state.consumeSuppressedPtyExit)
 
   useNativeChatToggleShortcut(worktreeId, isWorktreeActive && ownsNativeChatToggleShortcut)
@@ -148,7 +151,9 @@ const TerminalPaneOverlayLayer = memo(function TerminalPaneOverlayLayer({
             </RetainedPaneHost>
           ) : null
         }
-        const isActive = Boolean(isVisible && assignment?.groupId === activeGroupId)
+        const isActive = Boolean(
+          isVisible && workspacePaneFocused && assignment?.groupId === activeGroupId
+        )
         const activityTerminalPortal = findActivityTerminalPortal(activityTerminalPortals, {
           worktreeId,
           tabId: terminalTab.id

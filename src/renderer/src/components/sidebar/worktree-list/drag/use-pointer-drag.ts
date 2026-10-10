@@ -2,6 +2,7 @@ import { useCallback, useEffect } from 'react'
 import type React from 'react'
 import type { WorkspaceStatus, Worktree } from '../../../../../../shared/worktree/types'
 import { getWorktreeHostIdentity } from '../../../../../../shared/worktree/host-qualified-identity'
+import { acquireWebviewsDragPassthrough } from '../../../browser-pane/host-guest/webview-drag-passthrough'
 import { hasWorkspaceKanbanSidebarDropBoard } from '../../workspace-kanban-sidebar-drop'
 import {
   createSidebarDragPreview,
@@ -116,6 +117,9 @@ export function useWorktreePointerDrag(args: {
         draggedCount: drag.draggedIds.length
       })
       drag.active = true
+      // Why: a card can be dropped on a workspace pane; a browser pane's guest would swallow
+      // the pointer stream and strand the drag over it.
+      drag.releaseWebviewDragPassthrough = acquireWebviewsDragPassthrough()
       drag.preview = preview
       drag.previewOffsetX = offsetX
       drag.previewOffsetY = offsetY

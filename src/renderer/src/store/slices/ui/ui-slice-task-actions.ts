@@ -9,11 +9,13 @@ import {
 import { PER_REPO_FETCH_LIMIT } from '../../../../../shared/work-items'
 import { isGitRepoKind } from '../../../../../shared/repo-kind'
 import { presetToQuery } from './ui-slice-hydration-sanitizers'
+import { createUiWorkspaceSplitActions } from './ui-slice-workspace-split-actions'
 
 const LINEAR_TASK_PREFETCH_LIMIT = 36
 
 export function createUiTaskActions(set: UISliceSet, get: UISliceGet): Partial<UISlice> {
   return {
+    ...createUiWorkspaceSplitActions(set),
     activeView: 'terminal',
     previousViewBeforeTasks: 'terminal',
     previousViewBeforeSettings: 'terminal',

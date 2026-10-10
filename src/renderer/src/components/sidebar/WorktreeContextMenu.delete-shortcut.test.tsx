@@ -99,7 +99,10 @@ const defaultStoreState = {
   ptyIdsByTabId: {},
   browserTabsByWorktree: {},
   worktreesByRepo: {},
-  repos: []
+  repos: [],
+  // Read by the workspace split entries of the menu.
+  folderWorkspaces: [],
+  workspaceSplitGroups: []
 }
 
 vi.mock('@/store', () => ({

@@ -141,6 +141,7 @@ describe('workspace surface ids', () => {
       workspaceSurfaceIds: ids,
       workspaceSurfaceIdSet: new Set(ids)
     } as unknown as TerminalParkingFoundation
+    controller.visibleWorkspaceIds = ['repo::/worktree-0']
 
     const pass = collectTerminalParkingPassCandidates(controller)
 

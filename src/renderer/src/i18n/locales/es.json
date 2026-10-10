@@ -1,4 +1,11 @@
 {
+  "workspaceSplit": {
+    "newTerminal": "Nuevo terminal",
+    "paneLimit": "Una división puede contener hasta {{count}} espacios de trabajo",
+    "removePane": "Quitar el espacio de trabajo de la división",
+    "splitWith": "Dividir con espacio de trabajo",
+    "unsplit": "Deshacer la división del espacio de trabajo"
+  },
   "app": {
     "recoverableError": {
       "rootTitle": "Orca tuvo un error de renderizado.",

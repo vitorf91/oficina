@@ -41,7 +41,8 @@ export function useTerminalParkingPass(controller: TerminalParkingFoundation): v
     terminalProviderSnapshotCapabilityRevision,
     terminalRetentionBudgetEnabled,
     terminalSshParkingEnabled,
-    workspaceSurfaceIds
+    workspaceSurfaceIds,
+    visibleWorkspaceIds
   } = controller
   // Why: this effect is the sole writer, so these mirror the queued state without a render.
   const dispatchedIdSetsRef = useRef<{
@@ -214,6 +215,7 @@ export function useTerminalParkingPass(controller: TerminalParkingFoundation): v
     pendingStartupByTabId,
     pairedRuntimeParkingEnvironmentIds,
     renderedActiveWorktreeId,
+    visibleWorkspaceIds,
     tabsByWorktree,
     terminalParkingEnabled,
     terminalParkingRevision,
