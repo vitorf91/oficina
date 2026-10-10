@@ -205,6 +205,10 @@ function install(appPath = defaultAppPath) {
   if (!existsSync(appPath)) {
     throw new Error(`No app to install at ${appPath}`)
   }
+  // Why: --replace deletes the installed bundle first, so installing it onto itself would leave no app.
+  if (resolve(appPath) === resolve(installPath)) {
+    throw new Error(`Refusing to install ${installPath} onto itself`)
+  }
   if (existsSync(installPath) && !process.argv.includes('--replace')) {
     throw new Error(`${installPath} exists; pass --replace to overwrite this fork's own bundle.`)
   }

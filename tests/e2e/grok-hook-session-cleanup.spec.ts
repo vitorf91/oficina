@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import type { ElectronApplication } from '@stablyai/playwright-test'
+import { OFICINA_IDENTITY } from '../../src/shared/oficina-identity'
 import { expect, test } from './helpers/orca-app'
 import { createRestartSession } from './helpers/orca-restart'
 
@@ -53,6 +54,11 @@ test('removes the managed Grok hook config on quit', async (// oxlint-disable-ne
 
 test('preserves a user-cleared Grok config through quit and relaunch', async (// oxlint-disable-next-line no-empty-pattern -- this test owns both Electron launches.
 {}, testInfo) => {
+  // Why: Oficina never installs managed agent hooks (docs/OFICINA.md), so there is no config to preserve.
+  test.skip(
+    !OFICINA_IDENTITY.agentStatusHooksEnabled,
+    'Oficina does not install managed agent hooks'
+  )
   const session = createRestartSession(testInfo, LAUNCH_ENV)
   const configPath = grokConfigPath(session.userDataDir)
   const userClearedConfig = '{  "hooks" : {}  }\n'
