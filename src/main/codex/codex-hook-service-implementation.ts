@@ -5,6 +5,7 @@ import { normalizeRuntimePathForComparison } from '../../shared/cross-platform-p
 import { dedupeInFlightRun } from '../in-flight-run-dedupe'
 import { refreshManagedScriptIfPresent } from '../agent-hooks/managed-hook-script-refresh'
 import { writeManagedScript } from '../agent-hooks/installer-utils'
+import { OFICINA_IDENTITY } from '../../shared/oficina-identity'
 import { getOrcaManagedCodexHomePath } from './codex-home-paths'
 import { getManagedCommand, getManagedScriptPath } from './codex-hook-definition'
 import { installCodexHooksExclusively } from './codex-hook-local-install'
@@ -185,6 +186,18 @@ export class CodexHookService {
           isHooksEnabled
         ))
       )
+    }
+    // Why: this branch promotes approvals into ~/.codex and cleans legacy Orca entries there, which the
+    // official Orca owns next to Oficina; the fork never writes user-wide Codex files (docs/OFICINA.md).
+    if (!OFICINA_IDENTITY.agentStatusHooksEnabled) {
+      return {
+        agent: 'codex',
+        state: 'skipped',
+        configPath: runtimeHomePath ?? '',
+        managedHooksPresent: false,
+        detail: null,
+        skipReason: 'hooks_disabled'
+      }
     }
     return (
       this.refreshRuntimeUserHooksForRuntimeHome(runtimeHomePath, target) ??

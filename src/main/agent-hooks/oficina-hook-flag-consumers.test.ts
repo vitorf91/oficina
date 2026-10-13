@@ -13,6 +13,7 @@ const CONSUMERS: Record<string, 'a' | 'b'> = {
   'src/main/agent-hooks/opencode-plugin-settings.ts': 'a',
   'src/main/agent-hooks/wsl-hook-relay-deps.ts': 'a',
   'src/main/claude-accounts/claude-profile-router.ts': 'a',
+  'src/main/codex/codex-hook-service-implementation.ts': 'a',
   'src/main/ipc/pty/host-env/assembly.ts': 'a',
   'src/main/ipc/pty/host-env/opencode-config.ts': 'a',
   'src/main/ipc/pty/ipc/spawn-env-codex.ts': 'a',

@@ -43,8 +43,7 @@ const OWN_PATHS = [
   /^orca\/?$/,
   /^\.claude\/projects(\/|$)/,
   /^fake-claude\.log$/,
-  /^claude-hook-command\.sh$/,
-  /^\.orca\/agent-hooks\/claude-hook\.sh$/
+  /^claude-hook-command\.sh$/
 ]
 
 export function seedOrcaOwnedFiles(home: string): void {
