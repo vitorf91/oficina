@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { TUI_AGENT_CONFIG } from '../../shared/tui-agent-config'
+import { isTuiAgent, TUI_AGENT_CONFIG } from '../../shared/tui-agent-config'
 
 // Why: the shared test profile swaps the identity module for upstream Orca values; these tests pin the fork's.
 vi.unmock('../../shared/oficina-identity')
@@ -76,7 +76,10 @@ afterEach(() => {
 describe('installer entry points under the fork identity', () => {
   it('reports every agent as having no hooks to install, whatever the saved switch says', () => {
     for (const agent of Object.keys(TUI_AGENT_CONFIG)) {
-      expect(isAgentStatusHooksEnabledForAgent(ON, agent as never), agent).toBe(false)
+      expect(isTuiAgent(agent)).toBe(true)
+      if (isTuiAgent(agent)) {
+        expect(isAgentStatusHooksEnabledForAgent(ON, agent), agent).toBe(false)
+      }
     }
     expect(isAgentStatusHooksEnabled(ON)).toBe(false)
     expect(isAgentStatusHooksEnabled(null)).toBe(false)
@@ -108,7 +111,7 @@ describe('installer entry points under the fork identity', () => {
     expect(opencode.refresh).not.toHaveBeenCalled()
     expect(opencode.refresh2).not.toHaveBeenCalled()
     const sources = selectOpenCodePluginSources(
-      { opencodePluginSource: 'plugin', opencode2PluginSource: 'plugin2' } as never,
+      { opencodePluginSource: 'plugin', opencode2PluginSource: 'plugin2' },
       ON
     )
     expect(sources).toMatchObject({ opencodePluginSource: '', opencode2PluginSource: '' })
