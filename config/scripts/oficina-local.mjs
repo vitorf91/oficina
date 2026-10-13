@@ -378,8 +378,8 @@ function importOrcaData() {
     }
     filtered.settings[key] = value
   }
-  // Why forced off: the fork keeps agent hooks off (docs/OFICINA.md), so the saved switch must say so too.
-  filtered.settings.agentStatusHooksEnabled = false
+  // Why the saved switch is kept: the fork's installers are off by identity (oficina-identity.ts), but it still
+  // receives from the official Orca's hook scripts, and that receiver follows this switch. Forcing it off silenced them.
   // Why: the flag describes a key stored in the official Orca's ~/.orca, which Oficina does not read.
   if (filtered.settings.voice && typeof filtered.settings.voice === 'object') {
     filtered.settings.voice = { ...filtered.settings.voice, openAiApiKeyConfigured: false }
