@@ -227,7 +227,7 @@ What it does, in order:
 
 1. Refuses a dirty tree, a Node other than 24, and a local `oficina` that differs from `origin/oficina`.
 2. Lists the published upstream releases and takes the newest stable one (`vX.Y.Z`, not a draft or prerelease) that is newer than the newest stable tag already merged into `oficina`, then fetches that one tag. If there is none it says so and exits 0.
-3. Merges that tag into a new `sync/<tag>` branch with a merge commit (`--no-ff`).
+3. Merges that tag into a new `sync/<tag>` branch with a merge commit whose parents are `oficina` and the tag, measured from the last merged release (`git merge-tree --merge-base=<previous tag>`, Git 2.40 or later). Why: Orca cuts each release on its own branch, so the previous release is not an ancestor of the next one; git's own merge base sits far back on `main`, where every release-only fix conflicts (21 files for v1.4.230, against 7 measured from v1.4.224, all of them Oficina's).
 4. Installs dependencies with the frozen lockfile (root and `mobile/`), then runs the gates below in order and stops at the first failure. Nothing is pushed or installed unless every gate passed.
 5. Prints a summary with the tag, each gate and its duration; the PR body carries the same table.
 
@@ -243,10 +243,11 @@ The gates cannot tell whether the app feels right. After an install, launch Ofic
 
 ### When the merge conflicts
 
-The script aborts the merge (no half-merged state, no leftover branch), lists the conflicting files and prints how to reproduce. Then:
+The merge is computed without touching the checkout, so a conflict leaves no half-merged state and no leftover branch. The script lists the conflicting files, writes the merge message into the git dir and prints the commands. Then:
 
-1. `git switch -c sync/<tag> oficina && git merge --no-ff <tag>`, resolve keeping both upstream's change and Oficina's behaviour (`src/shared/oficina-identity.ts`, the workspace-split files and the `config/*oficina*` files are Oficina's), and `git commit`.
-2. Write the file, the cause and the resolution of each conflict into a notes file, and run `pnpm oficina:sync --push --merge --notes-file=<path>` again. On a `sync/<tag>` branch that already contains the tag, it skips the merge and runs the gates.
+1. `git switch -c sync/<tag> oficina`, `git merge --no-ff --no-commit -s ours <tag>` (records the tag as the second parent), and `git read-tree -u --reset <tree>` with the tree it printed: the checkout then holds the merge measured from the last release, with conflict markers in the listed files (`git grep -n '^<<<<<<< '`).
+2. Resolve keeping both upstream's change and Oficina's behaviour (`src/shared/oficina-identity.ts`, the workspace-split files and the `config/*oficina*` files are Oficina's), `git add` the files, and `git commit -F <message file it printed>`.
+3. Write the file, the cause and the resolution of each conflict into a notes file, and run `pnpm oficina:sync --push --merge --notes-file=<path>` again. On a `sync/<tag>` branch that already contains the tag, it skips the merge and runs the gates.
 
 Prefer resolutions that shrink Oficina's footprint in upstream files, so the next merge is cheaper.
 

@@ -184,18 +184,32 @@ function createMergedBranch({ tag, lastMerged }) {
     `Upstream release: https://github.com/${UPSTREAM_SLUG}/releases/tag/${tag}\nPrevious sync: ${lastMerged}`,
     ...(trailer ? [trailer] : [])
   ].join('\n\n')
-  const result = mergeTagOntoNewBranch({ cwd: repoRoot, base: BASE, tag, branch, message })
+  const result = mergeTagOntoNewBranch({
+    cwd: repoRoot,
+    base: BASE,
+    tag,
+    branch,
+    message,
+    mergeBase: lastMerged
+  })
   if (result.merged) {
     return
   }
-  console.error(`\n${result.output}`)
-  console.error(`\n[oficina-sync] merging ${tag} into ${BASE} failed; the merge was aborted.`)
+  const messageFile = resolve(repoRoot, git('rev-parse', '--git-path', 'OFICINA_SYNC_MSG'))
+  writeFileSync(messageFile, `${message}\n`)
+  console.error(
+    `\n[oficina-sync] merging ${tag} into ${BASE} (measured from ${lastMerged}) conflicts; nothing was changed.`
+  )
   console.error(
     `Conflicting files (${result.conflicts.length}):\n${result.conflicts.map((file) => `  ${file}`).join('\n')}`
   )
   console.error(
-    `\nReproduce and resolve by hand:\n  git switch -c ${branch} ${BASE} && git merge --no-ff ${tag}\n` +
-      `Then commit, and re-run pnpm oficina:sync from ${branch} to continue with the gates.`
+    `\nResolve by hand (docs/OFICINA.md, "When the merge conflicts"):\n` +
+      `  git switch -c ${branch} ${BASE}\n` +
+      `  git merge --no-ff --no-commit -s ours ${tag}\n` +
+      `  git read-tree -u --reset ${result.tree}\n` +
+      `Fix the conflict markers in the files above, git add them, git commit -F ${messageFile},\n` +
+      `then re-run pnpm oficina:sync from ${branch} to continue with the gates.`
   )
   process.exit(1)
 }
