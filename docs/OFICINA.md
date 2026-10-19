@@ -38,7 +38,7 @@ fnm exec --using 24 -- pnpm install --frozen-lockfile                 # root
 (cd mobile && fnm exec --using 24 -- pnpm install --frozen-lockfile)  # mobile web bundle needs its own install
 fnm exec --using 24 -- node config/scripts/oficina-local.mjs build    # JS build, helpers, arm64 .app, signing
 fnm exec --using 24 -- node config/scripts/oficina-local.mjs install  # copies to /Applications/Oficina.app (--replace removes the old bundle first; refuses while Oficina runs)
-fnm exec --using 24 -- node config/scripts/oficina-local.mjs import-orca-data
+fnm exec --using 24 -- node config/scripts/oficina-local.mjs import-orca-data  # --replace re-imports over an existing profile (Data import below)
 ```
 
 A clean build took 110 s on a 10-core M-series Mac (typecheck+JS 38 s, helpers 10 s, electron-builder 30 s, signing 33 s), plus 6 s for the root install and 24 s for the mobile install.
@@ -76,10 +76,12 @@ security import id.p12 -k ~/Library/Keychains/login.keychain-db -P "$PW" -T /usr
 
 `import-orca-data` reads the official Orca's `profiles/local-default/orca-data.json` (read-only) and writes a filtered `orca-data.json` into Oficina's data folder. Oficina imports it into its own SQLite profile on first launch.
 
-- Kept: repos, projects, project groups and host setups, folder workspaces, settings (the Agent status switch stays as Orca had it: the fork's receiver follows it, and the installers are off by identity, not by this value), a few sidebar view preferences.
-- Dropped: sessions, terminals, PTY ids, worktree metadata, SSH targets, account/auth settings, API keys and cookies, proxy URL, mobile pairing, telemetry consent, `agentDefaultEnv`.
+- Kept: repos, projects, project groups and host setups, folder workspaces, worktree metadata (the names, statuses, order, comments and linked PRs given in Orca, with their identity aliases and lineage), settings (the Agent status switch stays as Orca had it: the fork's receiver follows it, and the installers are off by identity, not by this value), a few sidebar view preferences including collapsed groups.
+- Dropped: sessions, terminals, PTY ids, live Claude session ids, automations (both apps would run them), SSH targets, account/auth settings, API keys and cookies, proxy URL, mobile pairing, telemetry consent, `agentDefaultEnv`.
 - A copy is refused if any kept key name or value looks like a secret, or points into Orca's folders. Orca's device tokens, E2EE keys and account session files are never copied.
-- It refuses to run over an existing Oficina profile.
+- It refuses to run over an existing Oficina profile unless `--replace` is passed.
+
+To bring Oficina level with Orca again (new worktrees, renames, statuses), quit Oficina and run `import-orca-data --replace`. It moves the current profile entries (`profiles/`, `orca-data.json*`, `orca-profile-index.json*`, `.profile-state-access`) into `profile-backups/<time>/` inside Oficina's data folder and writes a fresh import; the next launch builds the profile from it. App-wide files (Local Storage with the split layout, orchestration, terminal history) stay. It refuses while `/Applications/Oficina.app` runs. To undo, quit Oficina and move the backed-up entries back.
 
 ## Audit: what Orca writes outside its own data folder
 
