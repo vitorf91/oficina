@@ -195,6 +195,14 @@ Its terminal lives in the official Orca's own daemon, so the fork cannot attach 
 - **Do not click "Install CLI & Skills"** in the feature tip. It installs the CLI link and agent skills into user-wide folders (see the audit row above), and it runs only on that click.
 - **Self-signed, not notarized.** Gatekeeper would reject a downloaded copy; a locally built one runs.
 
+## Verification
+
+- Level B (internal tool). GitHub Actions is off on the fork on purpose; the gate is local: the husky pre-commit (`lint-staged`) and the `oficina:sync` gates.
+- Small change: check only what it touched. `pnpm tc` for types, `pnpm test <path/to/file.test.ts>` for the affected tests, `pnpm run check:code-quality:changed` for lint (full `pnpm lint` is slow), and the Playwright spec of the screen you changed.
+- Text-only change: check the diff and the format; nothing else runs.
+- The full test battery and the packaged build (`oficina-local.mjs build`) run in `pnpm oficina:sync` and before installing a release, not on every change.
+- Keep local checks within about 2 minutes; there is no CI to wait for.
+
 ## Keeping upstream merges cheap
 
 Upstream files changed for the identity are one-line swaps to `OFICINA_IDENTITY` (measure against the last merged release: `git diff "$(git tag --merged oficina --sort=-v:refname 'v[0-9]*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)" oficina --stat`). `config/electron-builder.config.cjs` is untouched. After a sync (next section), check the coexistence checklist: `orca://` still resolves to Orca, `/usr/local/bin/orca` still points into Orca.app, and `~/.orca` and the user agent configs are unchanged after a launch.
