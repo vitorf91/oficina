@@ -4,7 +4,7 @@
 //   node config/scripts/oficina-local.mjs build            JS build + native helpers + packaged arm64 .app + sign
 //   node config/scripts/oficina-local.mjs sign [app]       sign every Mach-O inside-out with the local identity
 //   node config/scripts/oficina-local.mjs install [app]    copy the .app to /Applications/Oficina.app
-//   node config/scripts/oficina-local.mjs import-orca-data [--target=dir]  copy repo list + preferences from the official Orca
+//   node config/scripts/oficina-local.mjs import-orca-data [--target=dir] [--replace]  copy repos, worktree names + preferences from the official Orca
 //
 // Nothing here writes to the official Orca's bundle or data folder; import-orca-data only reads them.
 import { execFileSync, spawnSync } from 'node:child_process'
@@ -18,6 +18,7 @@ import {
   closeSync,
   readFileSync,
   readdirSync,
+  renameSync,
   rmSync,
   writeFileSync
 } from 'node:fs'
@@ -313,9 +314,10 @@ const KEPT_UI_KEYS = [
   'statusBarVisible',
   'worktreeCardProperties',
   'editorFontZoomLevel',
-  'browserDefaultZoomLevel'
+  'browserDefaultZoomLevel',
+  'collapsedGroups'
 ]
-// Repo list and project structure only: no sessions, terminals, SSH targets, PTY ids or worktree metadata.
+// Repo list, project structure and worktree metadata: no sessions, terminals, SSH targets, PTY ids or automations.
 const KEPT_TOP_LEVEL_KEYS = [
   'schemaVersion',
   'repos',
@@ -323,8 +325,17 @@ const KEPT_TOP_LEVEL_KEYS = [
   'projectHostSetups',
   'projectGroups',
   'folderWorkspaces',
-  'sparsePresetsByRepo'
+  'sparsePresetsByRepo',
+  // Why: the names, statuses, order and comments given to worktrees in Orca; these rows move together on load.
+  'worktreeMeta',
+  'worktreeMetaByIdentity',
+  'worktreeIdentityAliases',
+  'worktreeLineageById',
+  'workspaceLineageByChildKey'
 ]
+// Top-level entries that make up a profile; --replace moves them aside so the next launch imports afresh.
+const PROFILE_ENTRY =
+  /^(?:profiles|profile-move-intents|\.profile-state-access|orca-data\.json.*|orca-profile-index\.json.*)$/
 // Booleans that only say a secret exists elsewhere; the importer resets them to false.
 const BOOLEAN_FLAG_KEY_PATHS = new Set(['$.settings.voice.openAiApiKeyConfigured'])
 const SECRET_KEY_NAME =
@@ -352,12 +363,38 @@ function findSecretKeyPaths(value, path = '$') {
   return []
 }
 
+// Why a move, not a delete: the replaced profile stays restorable by moving its entries back.
+function moveProfileAside() {
+  if (!targetArgument && spawnSync('pgrep', ['-f', `${installPath}/Contents/`]).status === 0) {
+    throw new Error(`${installPath} is running; quit Oficina before replacing its profile.`)
+  }
+  const entries = existsSync(OFICINA_DATA_DIR)
+    ? readdirSync(OFICINA_DATA_DIR).filter((name) => PROFILE_ENTRY.test(name))
+    : []
+  if (entries.length === 0) {
+    return null
+  }
+  const backupDir = join(
+    OFICINA_DATA_DIR,
+    'profile-backups',
+    new Date().toISOString().replace(/[:.]/g, '-')
+  )
+  mkdirSync(backupDir, { recursive: true, mode: 0o700 })
+  for (const name of entries) {
+    renameSync(join(OFICINA_DATA_DIR, name), join(backupDir, name))
+  }
+  return backupDir
+}
+
 function importOrcaData() {
   const sourceFile = join(OFFICIAL_ORCA_DATA_DIR, 'profiles', 'local-default', 'orca-data.json')
   const targetFile = join(OFICINA_DATA_DIR, 'orca-data.json')
   const targetProfileDir = join(OFICINA_DATA_DIR, 'profiles')
-  if (existsSync(targetFile) || existsSync(targetProfileDir)) {
-    throw new Error(`${OFICINA_DATA_DIR} already holds a profile; refusing to overwrite it.`)
+  const replace = process.argv.includes('--replace')
+  if (!replace && (existsSync(targetFile) || existsSync(targetProfileDir))) {
+    throw new Error(
+      `${OFICINA_DATA_DIR} already holds a profile; pass --replace to move it aside and import again.`
+    )
   }
   const source = JSON.parse(readFileSync(sourceFile, 'utf8'))
   const filtered = {}
@@ -403,6 +440,7 @@ function importOrcaData() {
     )
   }
 
+  const movedAsideTo = replace ? moveProfileAside() : null
   mkdirSync(OFICINA_DATA_DIR, { recursive: true, mode: 0o700 })
   writeFileSync(targetFile, JSON.stringify(filtered), { mode: 0o600 })
   chmodSync(targetFile, 0o600)
@@ -414,6 +452,8 @@ function importOrcaData() {
         repos: filtered.repos?.length ?? 0,
         projects: filtered.projects?.length ?? 0,
         folderWorkspaces: filtered.folderWorkspaces?.length ?? 0,
+        worktreeMeta: Object.keys(filtered.worktreeMeta ?? {}).length,
+        movedAsideTo,
         settingsKept: Object.keys(filtered.settings).length,
         settingsDropped: droppedSettings,
         uiKeysKept: Object.keys(filtered.ui).length,
@@ -446,7 +486,7 @@ switch (command) {
     break
   default:
     console.error(
-      'usage: oficina-local.mjs build | sign [app] | install [app] [--replace] | import-orca-data [--target=dir]'
+      'usage: oficina-local.mjs build | sign [app] | install [app] [--replace] | import-orca-data [--target=dir] [--replace]'
     )
     process.exitCode = 2
 }

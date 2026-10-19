@@ -10,7 +10,10 @@ import { getE2ECompletedOnboardingProfile } from './e2e-completed-onboarding-pro
  * (its HOME is redirected, so the real folder is never opened) and writes the result as the
  * userData `orca-data.json` that the next launch imports into its own profile.
  */
-export function importProfileFromOfficialOrca(userDataDir: string): void {
+export function importProfileFromOfficialOrca(
+  userDataDir: string,
+  officialData: Record<string, unknown> = {}
+): void {
   const officialHome = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'orca-e2e-official-home-')))
   try {
     const officialProfileDir = path.join(
@@ -33,7 +36,8 @@ export function importProfileFromOfficialOrca(userDataDir: string): void {
         projectHostSetups: [],
         projectGroups: [],
         folderWorkspaces: [],
-        ui: { sidebarWidth: 300 }
+        ui: { sidebarWidth: 300 },
+        ...officialData
       })
     )
     // The launch fixture seeded a first-run file; the importer refuses to write over a profile.
