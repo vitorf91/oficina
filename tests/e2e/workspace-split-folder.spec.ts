@@ -19,11 +19,10 @@ test('a folder workspace card can be dropped into a pane and the pair splits', a
       .flat()
       .find((worktree) => worktree.isMainWorktree)!
     const group = await window.api.projectGroups.create({ name: 'Folder E2E', parentPath: dir })
-    const workspace = await state.createFolderWorkspace({
-      projectGroupId: group.id,
-      name: 'notes-folder',
-      folderPath: dir
-    })
+    const workspace = await state.createFolderWorkspace(
+      { projectGroupId: group.id, name: 'notes-folder', folderPath: dir },
+      { runtimeEnvironmentId: null }
+    )
     if (!workspace) {
       throw new Error('Expected the folder workspace to be created')
     }

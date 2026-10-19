@@ -51,7 +51,7 @@ test('three workspaces from two projects sit side by side with a fourth below', 
     .poll(() =>
       orcaPage.evaluate(async (repoId) => {
         const store = window.__store!
-        await store.getState().fetchRepos()
+        await store.getState().fetchRepos({ runtimeEnvironmentId: null })
         const repo = store.getState().repos.find((candidate) => candidate.id === repoId)
         if (!repo) {
           return 0
