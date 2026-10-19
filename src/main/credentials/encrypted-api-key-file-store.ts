@@ -1,4 +1,4 @@
-import { safeStorage } from 'electron'
+import { getSecretStore } from '../../shared/secret-store'
 import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -12,6 +12,8 @@ import { ApiKeyFileUnreadableError } from './api-key-file-unreadable-error'
 import { OFICINA_IDENTITY } from '../../shared/oficina-identity'
 
 type EncryptedApiKeyFileStore = {
+  /** Where the envelope lives and how it starts, for orcad's plaintext migration. */
+  envelopeFile: () => { path: string; envelopePrefix: string }
   protection: () => SecretAtRestProtection | null
   has: () => boolean
   save: (key: string) => void
@@ -74,10 +76,10 @@ export function createEncryptedApiKeyFileStore({
     if (envelope.kind === 'plaintext') {
       return envelope.payload.toString('utf8')
     }
-    if (!safeStorage.isEncryptionAvailable()) {
+    if (!getSecretStore().isEncryptionAvailable()) {
       throw new Error(`${providerLabel} API key could not be decrypted`)
     }
-    return safeStorage.decryptString(envelope.payload)
+    return getSecretStore().decryptString(envelope.payload)
   }
 
   function has(): boolean {
@@ -116,10 +118,10 @@ export function createEncryptedApiKeyFileStore({
     if (!trimmed) {
       throw new Error(`${providerLabel} API key is required`)
     }
-    if (safeStorage.isEncryptionAvailable()) {
+    if (getSecretStore().isEncryptionAvailable()) {
       writeSecureFile(
         getApiKeyPath(),
-        encodeApiKeyEnvelope('encrypted', safeStorage.encryptString(trimmed)),
+        encodeApiKeyEnvelope('encrypted', getSecretStore().encryptString(trimmed)),
         { durable: true }
       )
       cachedApiKey = trimmed
@@ -174,5 +176,12 @@ export function createEncryptedApiKeyFileStore({
     rmSync(getApiKeyPath(), { force: true })
   }
 
-  return { has, save, read, clear, protection }
+  return {
+    has,
+    save,
+    read,
+    clear,
+    protection,
+    envelopeFile: () => ({ path: getApiKeyPath(), envelopePrefix })
+  }
 }

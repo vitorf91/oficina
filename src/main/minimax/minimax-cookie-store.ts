@@ -1,4 +1,4 @@
-import { safeStorage } from 'electron'
+import { getSecretStore } from '../../shared/secret-store'
 import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -7,7 +7,7 @@ import type { SecretAtRestProtection } from '../../shared/secret-at-rest-protect
 import { OFICINA_IDENTITY } from '../../shared/oficina-identity'
 
 const MINIMAX_COOKIE_FILE = 'minimax-session-cookie.enc'
-const COOKIE_ENVELOPE_PREFIX = 'orca-minimax-cookie:v1:'
+export const COOKIE_ENVELOPE_PREFIX = 'orca-minimax-cookie:v1:'
 let cachedMiniMaxCookie: string | null = null
 let warnedMiniMaxCookieStatusHardenFailure = false
 
@@ -20,7 +20,7 @@ function getOrcaDir(): string {
   return join(homedir(), OFICINA_IDENTITY.homeDirName)
 }
 
-function getMiniMaxCookiePath(): string {
+export function getMiniMaxCookiePath(): string {
   return join(getOrcaDir(), MINIMAX_COOKIE_FILE)
 }
 
@@ -73,16 +73,16 @@ function readEnvelope(envelope: MiniMaxCookieEnvelope): string {
   if (envelope.kind === 'plaintext') {
     return envelope.payload.toString('utf8')
   }
-  if (!safeStorage.isEncryptionAvailable()) {
+  if (!getSecretStore().isEncryptionAvailable()) {
     throw new Error('MiniMax session cookie could not be decrypted')
   }
-  return safeStorage.decryptString(envelope.payload)
+  return getSecretStore().decryptString(envelope.payload)
 }
 
 function readLegacyCookie(raw: Buffer): string {
-  if (safeStorage.isEncryptionAvailable()) {
+  if (getSecretStore().isEncryptionAvailable()) {
     try {
-      return safeStorage.decryptString(raw)
+      return getSecretStore().decryptString(raw)
     } catch {
       const plaintext = raw.toString('utf8')
       if (looksLikeCookieHeader(plaintext)) {
@@ -143,10 +143,10 @@ export function saveMiniMaxSessionCookie(cookie: string): void {
   if (!trimmed) {
     throw new Error('MiniMax session cookie is required')
   }
-  if (safeStorage.isEncryptionAvailable()) {
+  if (getSecretStore().isEncryptionAvailable()) {
     writeSecureFile(
       getMiniMaxCookiePath(),
-      encodeCookieEnvelope('encrypted', safeStorage.encryptString(trimmed))
+      encodeCookieEnvelope('encrypted', getSecretStore().encryptString(trimmed))
     )
     cachedMiniMaxCookie = trimmed
     return

@@ -157,7 +157,8 @@ async function openRepoWithTwoWorktrees(
 /** Types `claude` into the active pane and waits until the hook reports reached the status store. */
 async function startFakeClaudeInActivePane(page: Page, worktreeId: string): Promise<void> {
   const ptyId = await waitForActivePanePtyId(page, 30_000)
-  await execInTerminal(page, ptyId, 'command -v claude')
+  // Why unset -f: since v1.4.230 Orca wraps `claude` in a shell function that calls `command claude`; the path is what matters.
+  await execInTerminal(page, ptyId, '(unset -f claude 2>/dev/null; command -v claude)')
   await waitForTerminalOutput(page, '/cli/bin/claude')
   await execInTerminal(page, ptyId, 'claude')
   await waitForTerminalOutput(page, `FAKE_CLAUDE_READY:${FAKE_CLAUDE_SESSION_ID}`, 30_000)

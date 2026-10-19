@@ -11,6 +11,9 @@ import { DEFAULT_UI_LOCALE, resolveUiLocale, type SupportedUiLocale } from '../.
 import { UI_LANGUAGE_SYSTEM, type UiLanguage } from '../../shared/ui-language'
 import type { PluginLanguagePackRegistration } from '../../shared/plugins/plugin-language-pack-artifact'
 
+// Why here: register-app-menu.ts sits at the max-lines limit, so it takes the fork's renamer from this import.
+export { withProductName } from '../../shared/oficina-product-name'
+
 export const mainI18n: I18nInstance = i18next.createInstance()
 
 let initialized = false
