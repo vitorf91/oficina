@@ -9,30 +9,30 @@ import { describe, expect, it } from 'vitest'
 //   a: installs, refreshes or removes user-wide hook files, configs or plugins. Must stay off in the fork.
 //   b: consumes hook events or session ids, or exports the receiver address. Follows the receiver switch.
 const CONSUMERS: Record<string, 'a' | 'b'> = {
+  'src/main/agent-hooks/agent-hook-runtime-deps.ts': 'b',
   'src/main/agent-hooks/managed-agent-hook-controls.ts': 'a',
   'src/main/agent-hooks/opencode-plugin-settings.ts': 'a',
   'src/main/agent-hooks/wsl-hook-relay-deps.ts': 'a',
   'src/main/claude-accounts/claude-profile-router.ts': 'a',
   'src/main/codex/codex-hook-service-implementation.ts': 'a',
+  'src/main/codex/codex-runtime-home-launch-preparation.ts': 'a',
+  'src/main/codex/codex-session-resume-launch-preparation.ts': 'a',
   'src/main/ipc/pty/host-env/assembly.ts': 'a',
   'src/main/ipc/pty/host-env/opencode-config.ts': 'a',
-  'src/main/ipc/pty/ipc/spawn-env-codex.ts': 'a',
   'src/main/ipc/pty/provider/local-configure.ts': 'a',
-  'src/main/ipc/pty/runtime/spawn-preflight.ts': 'a',
+  'src/main/ipc/pty/spawn-host-env.ts': 'a',
   'src/main/ipc/settings.ts': 'a',
   'src/main/opencode/opencode-status-plugin-startup-refresh.ts': 'a',
+  'src/main/orcad/orcad-codex-account-homes.ts': 'a',
   'src/main/orcad/orcad-entry.ts': 'b',
-  'src/main/runtime/orca-runtime-stop-requested-pty-ids.ts': 'b',
+  'src/main/orcad/orcad-managed-agent-hooks.ts': 'a',
+  'src/main/runtime/construction/runtime-service-state.ts': 'b',
   'src/main/runtime/rpc/methods/agent-hooks.ts': 'a',
   'src/main/runtime/runtime-client-settings.ts': 'a',
-  'src/main/ssh/ssh-relay-session.ts': 'a',
-  'src/main/startup/codex-launch-preparation.ts': 'a',
-  'src/main/startup/codex-session-resume-launch.ts': 'a',
   'src/main/startup/configure-process.ts': 'a',
   'src/main/startup/main-process-pty-startup.ts': 'a',
   'src/main/startup/main-process-ready-foundation.ts': 'a',
-  'src/main/startup/main-process-ready-runtime.ts': 'a',
-  'src/main/startup/main-process-runtime-service.ts': 'b'
+  'src/main/startup/main-process-ready-runtime.ts': 'a'
 }
 
 // Files that define the switches, or read the receiver one; they are the gate, not consumers of it.
