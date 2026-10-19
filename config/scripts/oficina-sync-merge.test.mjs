@@ -47,14 +47,14 @@ describe('mergeTagOntoNewBranch', () => {
       branch: 'sync/v1.0.1',
       message: 'chore(sync): merge Orca v1.0.1'
     })
-    expect(result).toEqual({ merged: true, conflicts: [], output: '' })
+    expect(result).toMatchObject({ merged: true, conflicts: [] })
     expect(git('branch', '--show-current')).toBe('sync/v1.0.1')
     expect(git('rev-list', '--parents', '-n', '1', 'HEAD').split(' ')).toHaveLength(3)
     expect(git('merge-base', '--is-ancestor', 'v1.0.1', 'HEAD')).toBe('')
     expect(git('log', '-1', '--format=%s')).toBe('chore(sync): merge Orca v1.0.1')
   })
 
-  it('aborts on a conflict and leaves the checkout, the base and the branch list as they were', () => {
+  it('stops on a conflict and leaves the checkout, the base and the branch list as they were', () => {
     commitFile('shared.txt', 'upstream line, changed by the fork\n', 'fork change')
     const before = git('rev-parse', 'HEAD')
     const result = mergeTagOntoNewBranch({
@@ -71,6 +71,36 @@ describe('mergeTagOntoNewBranch', () => {
     expect(git('rev-parse', 'HEAD')).toBe(before)
     expect(git('branch', '--list', 'sync/*')).toBe('')
     expect(() => git('rev-parse', '-q', '--verify', 'MERGE_HEAD')).toThrow()
+  })
+
+  it('measures from the last merged release, so a fix Orca made only on its release branch does not conflict', () => {
+    // Orca cuts v1.1.0 on its own branch with a hotfix, and v1.2.0 from main, which redid that fix its own way.
+    git('switch', '--detach', 'v1.0.0')
+    commitFile('hotfix.txt', 'fixed on the release branch\n', 'release-only hotfix')
+    git('tag', 'v1.1.0')
+    git('switch', '--detach', 'v1.0.0')
+    commitFile('hotfix.txt', 'fixed on main\n', 'main fix')
+    git('tag', 'v1.2.0')
+    git('switch', 'oficina')
+    git('merge', '--no-ff', '-m', 'chore(sync): merge Orca v1.1.0', 'v1.1.0')
+    commitFile('oficina-only.txt', 'fork file\n', 'fork change')
+    const options = {
+      cwd: repo,
+      base: 'oficina',
+      tag: 'v1.2.0',
+      branch: 'sync/v1.2.0',
+      message: 'chore(sync): merge Orca v1.2.0'
+    }
+
+    expect(mergeTagOntoNewBranch(options).conflicts).toEqual(['hotfix.txt'])
+    const result = mergeTagOntoNewBranch({ ...options, mergeBase: 'v1.1.0' })
+    expect(result).toMatchObject({ merged: true, conflicts: [] })
+    expect(git('show', 'HEAD:hotfix.txt')).toBe('fixed on main')
+    expect(git('show', 'HEAD:oficina-only.txt')).toBe('fork file')
+    expect(git('rev-list', '--parents', '-n', '1', 'HEAD').split(' ').slice(1)).toEqual([
+      git('rev-parse', 'oficina'),
+      git('rev-parse', 'v1.2.0^{commit}')
+    ])
   })
 
   it('returns to a detached checkout when that is where it started', () => {
